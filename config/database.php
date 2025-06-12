@@ -1,7 +1,7 @@
 <?php
 // config/database.php
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'marketplace_software');
+define('DB_NAME', 'misistema');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_CHARSET', 'utf8mb4');
@@ -38,7 +38,7 @@ class Database {
 // ====================================
 
 // config/constants.php
-define('SITE_URL', 'http://localhost/mi-marketplace');
+define('SITE_URL', 'http://localhost/misistema');
 define('ADMIN_URL', SITE_URL . '/admin');
 define('ASSETS_URL', SITE_URL . '/assets');
 define('UPLOADS_URL', SITE_URL . '/assets/uploads');
@@ -46,8 +46,8 @@ define('DOWNLOADS_PATH', __DIR__ . '/../downloads');
 define('UPLOADS_PATH', __DIR__ . '/../assets/uploads');
 
 // Configuraciones de seguridad
-define('SESSION_NAME', 'marketplace_session');
-define('ADMIN_SESSION_NAME', 'admin_marketplace_session');
+define('SESSION_NAME', 'sistema_session');
+define('ADMIN_SESSION_NAME', 'admin_sistema_session');
 define('PASSWORD_MIN_LENGTH', 6);
 define('VERIFICATION_CODE_EXPIRY', 30); // minutos
 
@@ -58,8 +58,8 @@ define('DEFAULT_DOWNLOAD_LIMIT', 5);
 define('DEFAULT_UPDATE_MONTHS', 12);
 
 // Configuraciones de email
-define('FROM_EMAIL', 'noreply@mimarketplace.com');
-define('FROM_NAME', 'Mi Marketplace');
+define('FROM_EMAIL', 'noreply@misistema.com');
+define('FROM_NAME', 'Mi sistema');
 
 // Estados de orden
 define('ORDER_PENDING', 'pending');
