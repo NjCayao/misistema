@@ -16,7 +16,11 @@ misistema/
 │   ├── css/                        # Estilos del sitio
 │   ├── js/                         # JavaScript del sitio
 │   ├── images/                     # Imágenes generales
-│   └── uploads/                    # Imágenes subidas
+│   ├── uploads/                    # Imágenes subidas
+|   │   ├── products/                   # Para imágenes de productos
+|   │   ├── categories/                 # Para imágenes de categorías 
+|   │   ├── banners/                    # Para imágenes de banners 
+|   │   └── logos/                      # Para logos del sitio 
 │
 ├── config/                         # Configuraciones generales
 │   ├── database.php                # Conexión a BD
@@ -73,3 +77,9 @@ misistema/
 12/06/25 completado hasta la 2.2
 12/06/25 solucion de menus
 12/06/25 solucion de subida de imagenes con categorias 
+12/06/25  # 2.3 Gestión de Productos actualizado y corregido errores. 
+•	CRUD productos: Formularios completos (nombre, descripción, precio, categoría, imagen)
+•	Sistema versiones: Modal para agregar v1.0, v1.1, v1.2, etc.
+•	Subida archivos: Upload de ZIP/RAR por cada versión
+•	Pricing: Campo "precio deseado" → cálculo automático precio final
+•	Límites: Configurar re-descargas y meses de actualización

@@ -1,0 +1,12 @@
+# assets/uploads/.htaccess
+# Permitir acceso a imágenes
+<Files ~ "\.(jpg|jpeg|png|gif|webp|svg)$">
+    Order allow,deny
+    Allow from all
+</Files>
+
+# Denegar acceso a archivos peligrosos
+<Files ~ "\.(php|html|htm|js|css|txt|htaccess)$">
+    Order deny,allow
+    Deny from all
+</Files>

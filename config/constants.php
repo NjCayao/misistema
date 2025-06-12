@@ -3,11 +3,13 @@
 define('SITE_URL', 'http://localhost/misistema');
 define('ADMIN_URL', SITE_URL . '/admin');
 define('ASSETS_URL', SITE_URL . '/assets');
-define('UPLOADS_URL', SITE_URL . '/assets/uploads');
+define('UPLOADS_URL', SITE_URL . '/assets/uploads');  // REVERTIDO: como lo tenías originalmente
 define('VENDOR_URL', SITE_URL . '/vendor');
 define('ADMINLTE_URL', VENDOR_URL . '/adminlte');
-define('DOWNLOADS_PATH', __DIR__ . '/../downloads');
-define('UPLOADS_PATH', __DIR__ . '/../assets/uploads');
+
+// Rutas de archivos (manteniendo tu estructura original)
+define('UPLOADS_PATH', __DIR__ . '/../assets/uploads');     // REVERTIDO: como lo tenías
+define('DOWNLOADS_PATH', __DIR__ . '/../downloads');        // SOLO agregamos esta nueva
 
 // Configuraciones de seguridad
 define('SESSION_NAME', 'misistema_session');

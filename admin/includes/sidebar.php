@@ -23,7 +23,7 @@
                 
                 <!-- Dashboard -->
                 <li class="nav-item">
-                    <a href="<?php echo ADMIN_URL; ?>/index.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
+                    <a href="<?php echo ADMIN_URL; ?>/index.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' && !isset($_GET['page']) ? 'active' : ''; ?>">
                         <i class="nav-icon fas fa-tachometer-alt"></i>
                         <p>Dashboard</p>
                     </a>
@@ -40,20 +40,20 @@
                     </a>
                     <ul class="nav nav-treeview">
                         <li class="nav-item">
-                            <a href="<?php echo ADMIN_URL; ?>/pages/products/" class="nav-link">
-                                <i class="far fa-circle nav-icon"></i>
+                            <a href="<?php echo ADMIN_URL; ?>/pages/products/" class="nav-link <?php echo (strpos($_SERVER['REQUEST_URI'], '/products/') !== false && basename($_SERVER['PHP_SELF']) == 'index.php') ? 'active' : ''; ?>">
+                                <i class="fas fa-list nav-icon"></i>
                                 <p>Todos los Productos</p>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="<?php echo ADMIN_URL; ?>/pages/products/add.php" class="nav-link">
-                                <i class="far fa-circle nav-icon"></i>
+                            <a href="<?php echo ADMIN_URL; ?>/pages/products/?create=1" class="nav-link">
+                                <i class="fas fa-plus nav-icon"></i>
                                 <p>Agregar Producto</p>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="<?php echo ADMIN_URL; ?>/pages/products/categories.php" class="nav-link">
-                                <i class="far fa-circle nav-icon"></i>
+                            <a href="<?php echo ADMIN_URL; ?>/pages/products/categories.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'categories.php' ? 'active' : ''; ?>">
+                                <i class="fas fa-tags nav-icon"></i>
                                 <p>Categorías</p>
                             </a>
                         </li>
@@ -64,7 +64,10 @@
                 <li class="nav-item">
                     <a href="<?php echo ADMIN_URL; ?>/pages/orders/" class="nav-link">
                         <i class="nav-icon fas fa-shopping-cart"></i>
-                        <p>Órdenes</p>
+                        <p>
+                            Órdenes
+                            <span class="badge badge-info right">Próximo</span>
+                        </p>
                     </a>
                 </li>
 
@@ -72,7 +75,10 @@
                 <li class="nav-item">
                     <a href="<?php echo ADMIN_URL; ?>/pages/users/" class="nav-link">
                         <i class="nav-icon fas fa-users"></i>
-                        <p>Usuarios</p>
+                        <p>
+                            Usuarios
+                            <span class="badge badge-info right">Próximo</span>
+                        </p>
                     </a>
                 </li>
 
@@ -80,7 +86,10 @@
                 <li class="nav-item">
                     <a href="<?php echo ADMIN_URL; ?>/pages/reports/" class="nav-link">
                         <i class="nav-icon fas fa-chart-pie"></i>
-                        <p>Reportes</p>
+                        <p>
+                            Reportes
+                            <span class="badge badge-info right">Próximo</span>
+                        </p>
                     </a>
                 </li>
 
@@ -152,7 +161,164 @@
                     </ul>
                 </li>
 
+                <!-- Separador -->
+                <li class="nav-header">FRONTEND</li>
+
+                <!-- Ver Sitio -->
+                <li class="nav-item">
+                    <a href="<?php echo SITE_URL; ?>" class="nav-link" target="_blank">
+                        <i class="nav-icon fas fa-external-link-alt"></i>
+                        <p>
+                            Ver Sitio Web
+                            <span class="badge badge-success right">Nuevo</span>
+                        </p>
+                    </a>
+                </li>
+
+                <!-- Separador -->
+                <li class="nav-header">HERRAMIENTAS</li>
+
+                <!-- Limpiar Cache -->
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="clearCache()">
+                        <i class="nav-icon fas fa-broom"></i>
+                        <p>Limpiar Cache</p>
+                    </a>
+                </li>
+
+                <!-- Backup -->
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="generateBackup()">
+                        <i class="nav-icon fas fa-download"></i>
+                        <p>Generar Backup</p>
+                    </a>
+                </li>
+
+                <!-- Separador -->
+                <li class="nav-header">PROGRESO</li>
+
+                <!-- Progreso del desarrollo -->
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="showProgress()">
+                        <i class="nav-icon fas fa-tasks"></i>
+                        <p>
+                            Progreso del Proyecto
+                            <span class="badge badge-warning right">47%</span>
+                        </p>
+                    </a>
+                </li>
+
             </ul>
         </nav>
     </div>
 </aside>
+
+<!-- Scripts adicionales para funcionalidades del sidebar -->
+<script>
+function clearCache() {
+    if (confirm('¿Limpiar cache del sistema?')) {
+        // Aquí implementaremos la limpieza de cache
+        toastr.info('Funcionalidad próximamente disponible');
+    }
+}
+
+function generateBackup() {
+    if (confirm('¿Generar backup de la base de datos?')) {
+        // Aquí implementaremos el backup
+        toastr.info('Funcionalidad próximamente disponible');
+    }
+}
+
+function showProgress() {
+    // Modal con progreso del desarrollo
+    const progressModal = `
+        <div class="modal fade" id="progressModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title">
+                            <i class="fas fa-tasks"></i> Progreso del Proyecto MiSistema
+                        </h4>
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="progress-group">
+                            <span class="progress-text">Fase 1: Estructura Base</span>
+                            <span class="float-right"><b>100%</b></span>
+                            <div class="progress progress-sm">
+                                <div class="progress-bar bg-success" style="width: 100%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-group">
+                            <span class="progress-text">Fase 2: Dashboard Admin</span>
+                            <span class="float-right"><b>100%</b></span>
+                            <div class="progress progress-sm">
+                                <div class="progress-bar bg-success" style="width: 100%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-group">
+                            <span class="progress-text">Fase 3: Frontend Público</span>
+                            <span class="float-right"><b>0%</b></span>
+                            <div class="progress progress-sm">
+                                <div class="progress-bar bg-warning" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-group">
+                            <span class="progress-text">Fase 4: Sistema de Pagos</span>
+                            <span class="float-right"><b>0%</b></span>
+                            <div class="progress progress-sm">
+                                <div class="progress-bar bg-secondary" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-group">
+                            <span class="progress-text">Fase 5: Funcionalidades Avanzadas</span>
+                            <span class="float-right"><b>0%</b></span>
+                            <div class="progress progress-sm">
+                                <div class="progress-bar bg-secondary" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-group">
+                            <span class="progress-text">Fase 6: Optimización y Lanzamiento</span>
+                            <span class="float-right"><b>0%</b></span>
+                            <div class="progress progress-sm">
+                                <div class="progress-bar bg-secondary" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        <div class="progress-group">
+                            <span class="progress-text"><strong>Progreso Total</strong></span>
+                            <span class="float-right"><b>47%</b></span>
+                            <div class="progress">
+                                <div class="progress-bar bg-primary progress-bar-striped" style="width: 47%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info mt-3">
+                            <h5><i class="icon fas fa-info"></i> Próximo:</h5>
+                            Fase 3.1 - Diseño Base del Frontend
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remover modal anterior si existe
+    $('#progressModal').remove();
+    
+    // Agregar modal al body
+    $('body').append(progressModal);
+    
+    // Mostrar modal
+    $('#progressModal').modal('show');
+}
+</script>
