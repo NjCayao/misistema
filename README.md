@@ -68,3 +68,6 @@ misistema/
 ├── index.php                       # Página principal
 ├── robots.txt                      # SEO
 └── sitemap.xml                     # Sitemap automático
+
+# progreso del plan de desarollo del word
+12/06/25 completado hasta la 2.2
