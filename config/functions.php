@@ -84,35 +84,102 @@ function getFlashMessage($type) {
 }
 
 // Función para subir archivos
-function uploadFile($file, $destination) {
-    $allowedTypes = ALLOWED_FILE_TYPES;
+function uploadFile($file, $destination, $allowedTypes = null) {
+    // Tipos permitidos por defecto
+    if ($allowedTypes === null) {
+        $allowedTypes = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    }
+    
     $maxSize = MAX_FILE_SIZE;
     
+    // Verificar errores de subida
     if ($file['error'] !== UPLOAD_ERR_OK) {
-        return ['success' => false, 'message' => 'Error al subir archivo'];
+        $errorMessages = [
+            UPLOAD_ERR_INI_SIZE => 'El archivo es muy grande (límite del servidor)',
+            UPLOAD_ERR_FORM_SIZE => 'El archivo es muy grande (límite del formulario)',
+            UPLOAD_ERR_PARTIAL => 'El archivo se subió parcialmente',
+            UPLOAD_ERR_NO_FILE => 'No se seleccionó ningún archivo',
+            UPLOAD_ERR_NO_TMP_DIR => 'Falta directorio temporal',
+            UPLOAD_ERR_CANT_WRITE => 'Error al escribir archivo',
+            UPLOAD_ERR_EXTENSION => 'Extensión bloqueada'
+        ];
+        
+        $errorMsg = $errorMessages[$file['error']] ?? 'Error desconocido al subir archivo';
+        return ['success' => false, 'message' => $errorMsg];
     }
     
+    // Verificar tamaño
     if ($file['size'] > $maxSize) {
-        return ['success' => false, 'message' => 'Archivo muy grande'];
+        $maxSizeMB = round($maxSize / (1024 * 1024), 1);
+        return ['success' => false, 'message' => "Archivo muy grande. Máximo permitido: {$maxSizeMB}MB"];
     }
     
-    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    // Verificar que el archivo existe y no está vacío
+    if ($file['size'] == 0) {
+        return ['success' => false, 'message' => 'El archivo está vacío'];
+    }
+    
+    // Obtener extensión del archivo
+    $originalName = $file['name'];
+    $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+    
+    // Verificar extensión
     if (!in_array($extension, $allowedTypes)) {
-        return ['success' => false, 'message' => 'Tipo de archivo no permitido'];
+        return ['success' => false, 'message' => 'Tipo de archivo no permitido. Permitidos: ' . implode(', ', $allowedTypes)];
     }
     
-    $filename = uniqid() . '.' . $extension;
+    // Verificar MIME type para mayor seguridad
+    $allowedMimes = [
+        'jpg' => ['image/jpeg', 'image/jpg'],
+        'jpeg' => ['image/jpeg', 'image/jpg'],
+        'png' => ['image/png'],
+        'gif' => ['image/gif'],
+        'webp' => ['image/webp'],
+        'zip' => ['application/zip', 'application/x-zip-compressed'],
+        'rar' => ['application/x-rar-compressed', 'application/rar'],
+        '7z' => ['application/x-7z-compressed']
+    ];
+    
+    $fileMime = $file['type'];
+    $validMimes = $allowedMimes[$extension] ?? [];
+    
+    if (!empty($validMimes) && !in_array($fileMime, $validMimes)) {
+        return ['success' => false, 'message' => 'Tipo MIME no válido para extensión .' . $extension];
+    }
+    
+    // Generar nombre único
+    $filename = uniqid() . '_' . time() . '.' . $extension;
     $filepath = $destination . '/' . $filename;
     
+    // Crear directorio si no existe
     if (!is_dir($destination)) {
-        mkdir($destination, 0755, true);
+        if (!mkdir($destination, 0755, true)) {
+            return ['success' => false, 'message' => 'No se pudo crear el directorio de destino'];
+        }
     }
     
+    // Verificar permisos de escritura
+    if (!is_writable($destination)) {
+        return ['success' => false, 'message' => 'No hay permisos de escritura en el directorio'];
+    }
+    
+    // Mover archivo
     if (move_uploaded_file($file['tmp_name'], $filepath)) {
-        return ['success' => true, 'filename' => $filename, 'path' => $filepath];
+        // Verificar que el archivo se movió correctamente
+        if (file_exists($filepath)) {
+            return [
+                'success' => true, 
+                'filename' => $filename, 
+                'path' => $filepath,
+                'size' => filesize($filepath),
+                'original_name' => $originalName
+            ];
+        } else {
+            return ['success' => false, 'message' => 'El archivo no se guardó correctamente'];
+        }
+    } else {
+        return ['success' => false, 'message' => 'Error al mover el archivo al destino final'];
     }
-    
-    return ['success' => false, 'message' => 'Error al mover archivo'];
 }
 
 // Función para enviar email

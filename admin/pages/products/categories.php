@@ -13,6 +13,17 @@ if (!isAdmin()) {
 $success = '';
 $error = '';
 
+// Manejar mensajes de éxito de redirecciones
+if (isset($_GET['created'])) {
+    $success = 'Categoría creada exitosamente';
+} elseif (isset($_GET['updated'])) {
+    $success = 'Categoría actualizada exitosamente';
+} elseif (isset($_GET['deleted'])) {
+    $success = 'Categoría eliminada exitosamente';
+} elseif (isset($_GET['reordered'])) {
+    $success = 'Orden actualizado exitosamente';
+}
+
 // Procesar acciones
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -41,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Manejar subida de imagen
                     $imagePath = '';
                     if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                        $uploadResult = uploadFile($_FILES['image'], UPLOADS_PATH . '/categories');
+                        $uploadResult = uploadFile($_FILES['image'], UPLOADS_PATH . '/categories', ALLOWED_IMAGE_TYPES);
                         if ($uploadResult['success']) {
                             $imagePath = $uploadResult['filename'];
                         } else {
@@ -56,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$name, $slug, $description, $imagePath, $is_active]);
                     
                     $success = 'Categoría creada exitosamente';
+                    redirect($_SERVER['PHP_SELF'] . '?created=1');
                     break;
                     
                 case 'update':
@@ -86,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     // Manejar nueva imagen
                     if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                        $uploadResult = uploadFile($_FILES['image'], UPLOADS_PATH . '/categories');
+                        $uploadResult = uploadFile($_FILES['image'], UPLOADS_PATH . '/categories', ALLOWED_IMAGE_TYPES);
                         if ($uploadResult['success']) {
                             // Eliminar imagen anterior si existe
                             if ($currentImage && file_exists(UPLOADS_PATH . '/categories/' . $currentImage)) {
@@ -102,6 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$name, $slug, $description, $imagePath, $is_active, $id]);
                     
                     $success = 'Categoría actualizada exitosamente';
+                    redirect($_SERVER['PHP_SELF'] . '?updated=1');
                     break;
                     
                 case 'delete':
@@ -134,6 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     
                     $success = 'Categoría eliminada exitosamente';
+                    redirect($_SERVER['PHP_SELF'] . '?deleted=1');
                     break;
                     
                 case 'update_order':
@@ -143,6 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt->execute([intval($order), intval($id)]);
                     }
                     $success = 'Orden actualizado exitosamente';
+                    redirect($_SERVER['PHP_SELF'] . '?reordered=1');
                     break;
             }
         }

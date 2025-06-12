@@ -17,7 +17,8 @@ define('VERIFICATION_CODE_EXPIRY', 30); // minutos
 
 // Configuraciones de productos
 define('MAX_FILE_SIZE', 100 * 1024 * 1024); // 100MB
-define('ALLOWED_FILE_TYPES', ['zip', 'rar', '7z']);
+define('ALLOWED_FILE_TYPES', ['jpg', 'jpeg', 'png', 'gif', 'webp', 'zip', 'rar', '7z']);
+define('ALLOWED_IMAGE_TYPES', ['jpg', 'jpeg', 'png', 'gif', 'webp']);
 define('DEFAULT_DOWNLOAD_LIMIT', 5);
 define('DEFAULT_UPDATE_MONTHS', 12);
 

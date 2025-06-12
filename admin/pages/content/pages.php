@@ -13,6 +13,15 @@ if (!isAdmin()) {
 $success = '';
 $error = '';
 
+// Manejar mensajes de éxito de redirecciones
+if (isset($_GET['created'])) {
+    $success = 'Página creada exitosamente';
+} elseif (isset($_GET['updated'])) {
+    $success = 'Página actualizada exitosamente';
+} elseif (isset($_GET['deleted'])) {
+    $success = 'Página eliminada exitosamente';
+}
+
 // Procesar acciones
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -47,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$title, $slug, $content, $meta_title, $meta_description, $is_active]);
                     
                     $success = 'Página creada exitosamente';
+                    redirect($_SERVER['PHP_SELF'] . '?created=1');
                     break;
                     
                 case 'update':
@@ -77,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$title, $slug, $content, $meta_title, $meta_description, $is_active, $id]);
                     
                     $success = 'Página actualizada exitosamente';
+                    redirect($_SERVER['PHP_SELF'] . '?updated=1');
                     break;
                     
                 case 'delete':
@@ -89,6 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$id]);
                     
                     $success = 'Página eliminada exitosamente';
+                    redirect($_SERVER['PHP_SELF'] . '?deleted=1');
                     break;
             }
         }
@@ -110,6 +122,8 @@ try {
 
 // Si hay un ID en GET, obtener datos para editar
 $editPage = null;
+$createMode = isset($_GET['create']);
+
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     try {
         $stmt = $db->prepare("SELECT * FROM pages WHERE id = ?");
@@ -118,6 +132,9 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     } catch (Exception $e) {
         $error = 'Error al obtener página para editar';
     }
+} elseif ($createMode) {
+    // Modo creación - simular editPage para mostrar formulario
+    $editPage = true;
 }
 ?>
 <!DOCTYPE html>
@@ -359,12 +376,12 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                                     </div>
                                     <div class="card-footer">
                                         <button type="submit" class="btn btn-primary">
-                                            <i class="fas fa-save"></i> <?php echo $editPage ? 'Actualizar Página' : 'Crear Página'; ?>
+                                            <i class="fas fa-save"></i> <?php echo $createMode ? 'Crear Página' : 'Actualizar Página'; ?>
                                         </button>
                                         <a href="?" class="btn btn-secondary">
                                             <i class="fas fa-times"></i> Cancelar
                                         </a>
-                                        <?php if ($editPage): ?>
+                                        <?php if (!$createMode && $editPage): ?>
                                             <a href="<?php echo SITE_URL; ?>/<?php echo $editPage['slug']; ?>" target="_blank" class="btn btn-info">
                                                 <i class="fas fa-external-link-alt"></i> Ver Página
                                             </a>
@@ -465,7 +482,7 @@ $(document).ready(function() {
     });
     
     // Generar slug inicial si estamos editando
-    <?php if ($editPage): ?>
+    <?php if (!$createMode && $editPage): ?>
         $('#slugPreview').val('<?php echo $editPage['slug']; ?>');
     <?php endif; ?>
     

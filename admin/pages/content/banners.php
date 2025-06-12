@@ -13,6 +13,17 @@ if (!isAdmin()) {
 $success = '';
 $error = '';
 
+// Manejar mensajes de éxito de redirecciones
+if (isset($_GET['created'])) {
+    $success = 'Banner creado exitosamente';
+} elseif (isset($_GET['updated'])) {
+    $success = 'Banner actualizado exitosamente';
+} elseif (isset($_GET['deleted'])) {
+    $success = 'Banner eliminado exitosamente';
+} elseif (isset($_GET['reordered'])) {
+    $success = 'Orden actualizado exitosamente';
+}
+
 // Procesar acciones
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -55,6 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$title, $subtitle, $description, $imagePath, $button_text, $button_url, $position, $is_active, $position]);
                     
                     $success = 'Banner creado exitosamente';
+                    redirect($_SERVER['PHP_SELF'] . '?created=1');
                     break;
                     
                 case 'update':
@@ -99,6 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$title, $subtitle, $description, $imagePath, $button_text, $button_url, $position, $is_active, $id]);
                     
                     $success = 'Banner actualizado exitosamente';
+                    redirect($_SERVER['PHP_SELF'] . '?updated=1');
                     break;
                     
                 case 'delete':
@@ -122,6 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     
                     $success = 'Banner eliminado exitosamente';
+                    redirect($_SERVER['PHP_SELF'] . '?deleted=1');
                     break;
                     
                 case 'update_order':
@@ -131,6 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt->execute([intval($order), intval($id)]);
                     }
                     $success = 'Orden actualizado exitosamente';
+                    redirect($_SERVER['PHP_SELF'] . '?reordered=1');
                     break;
             }
         }

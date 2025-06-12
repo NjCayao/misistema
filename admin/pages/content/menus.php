@@ -1,5 +1,5 @@
 <?php
-// admin/pages/content/menus.php
+// admin/pages/content/menus_simple.php
 require_once '../../../config/database.php';
 require_once '../../../config/constants.php';
 require_once '../../../config/functions.php';
@@ -40,6 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$title, $url, $parent_id, $menu_location, $icon, $target, $is_active, $menu_location]);
                     
                     $success = 'Elemento de menú creado exitosamente';
+                    // Redireccionar después de crear para evitar re-envío
+                    redirect($_SERVER['PHP_SELF'] . '?created=1');
                     break;
                     
                 case 'update':
@@ -56,7 +58,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         throw new Exception('Datos inválidos');
                     }
                     
-                    // Verificar que no se asigne como padre de sí mismo
                     if ($parent_id == $id) {
                         throw new Exception('Un elemento no puede ser padre de sí mismo');
                     }
@@ -68,6 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$title, $url, $parent_id, $menu_location, $icon, $target, $is_active, $id]);
                     
                     $success = 'Elemento de menú actualizado exitosamente';
+                    // Redireccionar para limpiar formulario
+                    redirect($_SERVER['PHP_SELF'] . '?updated=1');
                     break;
                     
                 case 'delete':
@@ -82,26 +85,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $childCount = $stmt->fetchColumn();
                     
                     if ($childCount > 0) {
-                        throw new Exception('No se puede eliminar un elemento que tiene subelementos');
+                        throw new Exception('No se puede eliminar un elemento que tiene subelementos. Elimina primero los subelementos.');
                     }
                     
                     $stmt = $db->prepare("DELETE FROM menu_items WHERE id = ?");
                     $stmt->execute([$id]);
                     
                     $success = 'Elemento de menú eliminado exitosamente';
+                    redirect($_SERVER['PHP_SELF'] . '?deleted=1');
                     break;
                     
-                case 'update_order':
-                    $items = $_POST['items'] ?? [];
-                    foreach ($items as $item) {
-                        $id = intval($item['id']);
-                        $parent_id = intval($item['parent_id']) ?: null;
-                        $sort_order = intval($item['sort_order']);
-                        
-                        $stmt = $db->prepare("UPDATE menu_items SET parent_id = ?, sort_order = ? WHERE id = ?");
-                        $stmt->execute([$parent_id, $sort_order, $id]);
+                case 'toggle_status':
+                    $id = intval($_POST['id'] ?? 0);
+                    if ($id <= 0) {
+                        throw new Exception('ID inválido');
                     }
-                    $success = 'Orden del menú actualizado exitosamente';
+                    
+                    $stmt = $db->prepare("UPDATE menu_items SET is_active = NOT is_active WHERE id = ?");
+                    $stmt->execute([$id]);
+                    
+                    $success = 'Estado del elemento actualizado';
+                    redirect($_SERVER['PHP_SELF'] . '?toggled=1');
+                    break;
+                    
+                case 'move_up':
+                case 'move_down':
+                    $id = intval($_POST['id'] ?? 0);
+                    $direction = $_POST['action'] == 'move_up' ? -1 : 1;
+                    
+                    $stmt = $db->prepare("SELECT sort_order, menu_location, parent_id FROM menu_items WHERE id = ?");
+                    $stmt->execute([$id]);
+                    $current = $stmt->fetch();
+                    
+                    if ($current) {
+                        $newOrder = $current['sort_order'] + $direction;
+                        
+                        // Encontrar elemento con el que intercambiar
+                        $stmt = $db->prepare("
+                            SELECT id FROM menu_items 
+                            WHERE sort_order = ? AND menu_location = ? AND parent_id " . 
+                            ($current['parent_id'] ? "= " . $current['parent_id'] : "IS NULL")
+                        );
+                        $stmt->execute([$newOrder, $current['menu_location']]);
+                        $swap = $stmt->fetch();
+                        
+                        if ($swap) {
+                            // Intercambiar posiciones
+                            $stmt = $db->prepare("UPDATE menu_items SET sort_order = ? WHERE id = ?");
+                            $stmt->execute([$newOrder, $id]);
+                            
+                            $stmt = $db->prepare("UPDATE menu_items SET sort_order = ? WHERE id = ?");
+                            $stmt->execute([$current['sort_order'], $swap['id']]);
+                            
+                            $success = 'Orden actualizado';
+                            redirect($_SERVER['PHP_SELF'] . '?moved=1');
+                        }
+                    }
                     break;
             }
         }
@@ -152,6 +191,21 @@ $menuLocations = [
     'mobile' => 'Menú Móvil',
     'user' => 'Menú Usuario'
 ];
+
+// Si viene de actualización exitosa
+if (isset($_GET['updated'])) {
+    $success = 'Elemento de menú actualizado exitosamente';
+}
+$editItem = null;
+if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
+    try {
+        $stmt = $db->prepare("SELECT * FROM menu_items WHERE id = ?");
+        $stmt->execute([$_GET['edit']]);
+        $editItem = $stmt->fetch();
+    } catch (Exception $e) {
+        $error = 'Error al obtener elemento para editar';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -162,111 +216,35 @@ $menuLocations = [
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
     <link rel="stylesheet" href="<?php echo ADMINLTE_URL; ?>/plugins/fontawesome-free/css/all.min.css">
+    <link rel="stylesheet" href="<?php echo ADMINLTE_URL; ?>/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css">
     <link rel="stylesheet" href="<?php echo ADMINLTE_URL; ?>/dist/css/adminlte.min.css">
     
-    <!-- Nestable CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nestable2/1.6.0/jquery.nestable.min.css">
-    
     <style>
-        .menu-item {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            margin: 5px 0;
-            padding: 15px;
-            cursor: move;
-            min-height: 80px;
+        .menu-item-card {
+            border-left: 4px solid #007bff;
+            margin-bottom: 10px;
         }
-        .menu-item:hover {
-            background: #e9ecef;
-            border-color: #007bff;
+        .menu-item-child {
+            border-left-color: #28a745;
+            margin-left: 30px;
         }
-        .menu-item .dd-handle {
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 20px;
-            background: #007bff;
-            cursor: move;
-            border-radius: 5px 0 0 5px;
-        }
-        .menu-item .dd-handle:before {
-            content: '⋮⋮';
-            color: white;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 12px;
-            line-height: 1;
-        }
-        .menu-item .item-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-left: 25px;
-        }
-        .menu-item .item-info {
-            flex: 1;
-        }
-        .menu-item .item-title {
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 5px;
-        }
-        .menu-item .item-url {
-            color: #6c757d;
-            font-size: 13px;
-        }
-        .menu-item .item-actions {
-            margin-left: 15px;
+        .menu-item-actions {
             display: flex;
             gap: 5px;
         }
-        .menu-item.inactive {
+        .inactive-item {
             opacity: 0.6;
+            border-left-color: #6c757d;
         }
-        .dd-list {
-            min-height: 100px;
-            padding: 10px;
-        }
-        .dd-empty {
-            border: 2px dashed #ced4da;
-            padding: 40px 20px;
-            text-align: center;
-            color: #6c757d;
-            background: #f8f9fa;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        .dd-item {
-            position: relative;
-        }
-        .dd3-content {
-            display: block;
-            height: auto;
-            margin: 5px 0;
-            padding: 0;
-            background: none;
-            border: none;
-        }
-        .tab-content {
-            padding: 20px 0;
-        }
-        .nav-tabs .nav-link {
-            border-bottom: 3px solid transparent;
-        }
-        .nav-tabs .nav-link.active {
-            border-bottom-color: #007bff;
-            background-color: #f8f9fa;
+        .location-section {
+            margin-bottom: 30px;
         }
         .menu-preview {
-            background: white;
+            background: #f8f9fa;
             border: 1px solid #dee2e6;
             border-radius: 5px;
             padding: 15px;
-            margin-bottom: 20px;
+            margin-top: 15px;
         }
         .menu-preview ul {
             list-style: none;
@@ -291,7 +269,7 @@ $menuLocations = [
         }
         .menu-preview a:hover {
             color: #007bff;
-            background-color: #f8f9fa;
+            background-color: white;
         }
         .menu-preview .icon {
             margin-right: 8px;
@@ -347,150 +325,127 @@ $menuLocations = [
                 <?php endif; ?>
 
                 <div class="row">
-                    <!-- Editor de Menús -->
+                    <!-- Lista de Menús -->
                     <div class="col-md-8">
-                        <div class="card">
-                            <div class="card-header">
-                                <h3 class="card-title">Estructura de Menús</h3>
-                                <div class="card-tools">
-                                    <div class="btn-group">
-                                        <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown">
-                                            <i class="fas fa-eye"></i> Ver Menú
-                                        </button>
-                                        <div class="dropdown-menu">
-                                            <?php foreach ($menuLocations as $key => $name): ?>
-                                                <a class="dropdown-item" href="#" onclick="showMenuPreview('<?php echo $key; ?>')"><?php echo $name; ?></a>
+                        <?php foreach ($menuLocations as $locationKey => $locationName): ?>
+                            <div class="location-section">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3 class="card-title">
+                                            <i class="fas fa-bars"></i> <?php echo $locationName; ?>
+                                        </h3>
+                                        <div class="card-tools">
+                                            <span class="badge badge-info">
+                                                <?php echo count($menusByLocation[$locationKey] ?? []); ?> elementos
+                                            </span>
+                                            <button type="button" class="btn btn-sm btn-info" onclick="showPreview('<?php echo $locationKey; ?>')">
+                                                <i class="fas fa-eye"></i> Vista Previa
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php 
+                                        $locationItems = $menusByLocation[$locationKey] ?? [];
+                                        $menuTree = buildMenuTree($locationItems);
+                                        
+                                        if (empty($menuTree)): ?>
+                                            <div class="text-center text-muted p-4">
+                                                <i class="fas fa-bars fa-3x mb-3"></i>
+                                                <p>No hay elementos en este menú</p>
+                                                <a href="?create=<?php echo $locationKey; ?>" class="btn btn-primary">
+                                                    <i class="fas fa-plus"></i> Agregar Primer Elemento
+                                                </a>
+                                            </div>
+                                        <?php else: ?>
+                                            <?php foreach ($menuTree as $item): ?>
+                                                <?php renderMenuItemCard($item); ?>
                                             <?php endforeach; ?>
+                                        <?php endif; ?>
+
+                                        <!-- Vista previa -->
+                                        <div class="menu-preview" id="preview-<?php echo $locationKey; ?>" style="display: none;">
+                                            <h6>Vista Previa del Menú:</h6>
+                                            <ul>
+                                                <?php foreach ($menuTree as $item): ?>
+                                                    <?php if ($item['is_active']): ?>
+                                                        <li>
+                                                            <a href="<?php echo $item['url']; ?>" target="<?php echo $item['target']; ?>">
+                                                                <?php if ($item['icon']): ?>
+                                                                    <i class="<?php echo $item['icon']; ?> icon"></i>
+                                                                <?php endif; ?>
+                                                                <?php echo htmlspecialchars($item['title']); ?>
+                                                            </a>
+                                                            <?php if (!empty($item['children'])): ?>
+                                                                <ul>
+                                                                    <?php foreach ($item['children'] as $child): ?>
+                                                                        <?php if ($child['is_active']): ?>
+                                                                            <li>
+                                                                                <a href="<?php echo $child['url']; ?>" target="<?php echo $child['target']; ?>">
+                                                                                    <?php if ($child['icon']): ?>
+                                                                                        <i class="<?php echo $child['icon']; ?> icon"></i>
+                                                                                    <?php endif; ?>
+                                                                                    <?php echo htmlspecialchars($child['title']); ?>
+                                                                                </a>
+                                                                            </li>
+                                                                        <?php endif; ?>
+                                                                    <?php endforeach; ?>
+                                                                </ul>
+                                                            <?php endif; ?>
+                                                        </li>
+                                                    <?php endif; ?>
+                                                <?php endforeach; ?>
+                                            </ul>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="card-body">
-                                <!-- Tabs por ubicación -->
-                                <ul class="nav nav-tabs" id="menuTabs">
-                                    <?php $first = true; foreach ($menuLocations as $key => $name): ?>
-                                        <li class="nav-item">
-                                            <a class="nav-link <?php echo $first ? 'active' : ''; ?>" data-toggle="tab" href="#menu-<?php echo $key; ?>">
-                                                <?php echo $name; ?>
-                                                <span class="badge badge-info ml-1">
-                                                    <?php echo count($menusByLocation[$key] ?? []); ?>
-                                                </span>
-                                            </a>
-                                        </li>
-                                    <?php $first = false; endforeach; ?>
-                                </ul>
-
-                                <div class="tab-content" id="menuTabContent">
-                                    <?php $first = true; foreach ($menuLocations as $locationKey => $locationName): ?>
-                                        <div class="tab-pane fade <?php echo $first ? 'show active' : ''; ?>" id="menu-<?php echo $locationKey; ?>">
-                                            <div class="mt-3">
-                                                <div class="dd" id="nestable-<?php echo $locationKey; ?>" data-location="<?php echo $locationKey; ?>">
-                                                    <ol class="dd-list">
-                                                        <?php
-                                                        $locationItems = $menusByLocation[$locationKey] ?? [];
-                                                        $menuTree = buildMenuTree($locationItems);
-                                                        
-                                                        function renderMenuItem($item, $level = 0) {
-                                                            echo '<li class="dd-item menu-item ' . ($item['is_active'] ? '' : 'inactive') . '" data-id="' . $item['id'] . '">';
-                                                            echo '<div class="dd-handle"></div>';
-                                                            echo '<div class="dd3-content">';
-                                                            echo '<div class="item-content">';
-                                                            echo '<div class="item-info">';
-                                                            echo '<div class="item-title">' . htmlspecialchars($item['title']);
-                                                            if ($item['icon']) {
-                                                                echo ' <i class="' . htmlspecialchars($item['icon']) . ' ml-2"></i>';
-                                                            }
-                                                            echo '</div>';
-                                                            echo '<div class="item-url">' . htmlspecialchars($item['url']);
-                                                            if ($item['target'] == '_blank') {
-                                                                echo ' <i class="fas fa-external-link-alt text-info ml-1"></i>';
-                                                            }
-                                                            echo '</div>';
-                                                            echo '</div>';
-                                                            echo '<div class="item-actions">';
-                                                            echo '<button class="btn btn-sm btn-info btn-edit-menu" data-item=\'' . htmlspecialchars(json_encode($item)) . '\'>';
-                                                            echo '<i class="fas fa-edit"></i>';
-                                                            echo '</button>';
-                                                            echo '<button class="btn btn-sm btn-danger btn-delete-menu" data-id="' . $item['id'] . '" data-title="' . htmlspecialchars($item['title']) . '">';
-                                                            echo '<i class="fas fa-trash"></i>';
-                                                            echo '</button>';
-                                                            echo '</div>';
-                                                            echo '</div>';
-                                                            echo '</div>';
-                                                            
-                                                            if (!empty($item['children'])) {
-                                                                echo '<ol class="dd-list">';
-                                                                foreach ($item['children'] as $child) {
-                                                                    renderMenuItem($child, $level + 1);
-                                                                }
-                                                                echo '</ol>';
-                                                            }
-                                                            echo '</li>';
-                                                        }
-                                                        
-                                                        if (empty($menuTree)) {
-                                                            echo '<div class="dd-empty">No hay elementos en este menú. Arrastra elementos aquí o agrega nuevos.</div>';
-                                                        } else {
-                                                            foreach ($menuTree as $item) {
-                                                                renderMenuItem($item);
-                                                            }
-                                                        }
-                                                        ?>
-                                                    </ol>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    <?php $first = false; endforeach; ?>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Vista previa del menú -->
-                        <div class="card" id="menuPreviewCard" style="display: none;">
-                            <div class="card-header">
-                                <h3 class="card-title">Vista Previa del Menú</h3>
-                                <div class="card-tools">
-                                    <button type="button" class="btn btn-tool" onclick="hideMenuPreview()">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="card-body">
-                                <div class="menu-preview" id="menuPreviewContent">
-                                    <!-- Contenido generado por JavaScript -->
-                                </div>
-                            </div>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
 
                     <!-- Formulario -->
                     <div class="col-md-4">
                         <div class="card sticky-top">
                             <div class="card-header">
-                                <h3 class="card-title" id="formTitle">Nuevo Elemento de Menú</h3>
+                                <h3 class="card-title">
+                                    <?php echo $editItem ? 'Editar Elemento' : 'Nuevo Elemento'; ?>
+                                </h3>
+                                <?php if ($editItem): ?>
+                                    <div class="card-tools">
+                                        <a href="?" class="btn btn-sm btn-secondary">
+                                            <i class="fas fa-times"></i> Cancelar
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
                             </div>
-                            <form method="post" id="menuForm">
+                            <form method="post">
                                 <div class="card-body">
-                                    <input type="hidden" name="action" id="formAction" value="create">
-                                    <input type="hidden" name="id" id="menuItemId">
+                                    <input type="hidden" name="action" value="<?php echo $editItem ? 'update' : 'create'; ?>">
+                                    <?php if ($editItem): ?>
+                                        <input type="hidden" name="id" value="<?php echo $editItem['id']; ?>">
+                                    <?php endif; ?>
 
                                     <div class="form-group">
                                         <label for="menu_location">Ubicación del Menú *</label>
                                         <select class="form-control" id="menu_location" name="menu_location" required>
                                             <?php foreach ($menuLocations as $key => $name): ?>
-                                                <option value="<?php echo $key; ?>"><?php echo $name; ?></option>
+                                                <option value="<?php echo $key; ?>" 
+                                                    <?php echo ($editItem && $editItem['menu_location'] == $key) || (!$editItem && isset($_GET['create']) && $_GET['create'] == $key) ? 'selected' : ''; ?>>
+                                                    <?php echo $name; ?>
+                                                </option>
                                             <?php endforeach; ?>
                                         </select>
                                     </div>
 
                                     <div class="form-group">
                                         <label for="title">Título *</label>
-                                        <input type="text" class="form-control" id="title" name="title" required>
+                                        <input type="text" class="form-control" id="title" name="title" 
+                                               value="<?php echo $editItem ? htmlspecialchars($editItem['title']) : ''; ?>" required>
                                     </div>
 
                                     <div class="form-group">
                                         <label for="url">URL *</label>
-                                        <input type="text" class="form-control" id="url" name="url" required placeholder="/">
+                                        <input type="text" class="form-control" id="url" name="url" 
+                                               value="<?php echo $editItem ? htmlspecialchars($editItem['url']) : ''; ?>" required placeholder="/">
                                         <small class="text-muted">
                                             Ejemplos: /, /productos, /contacto, https://externa.com
                                         </small>
@@ -500,29 +455,35 @@ $menuLocations = [
                                         <label for="parent_id">Elemento Padre</label>
                                         <select class="form-control" id="parent_id" name="parent_id">
                                             <option value="">Elemento principal</option>
-                                            <!-- Se llenará dinámicamente -->
+                                            <?php foreach ($menuItems as $item): ?>
+                                                <?php if ($item['parent_id'] == null && (!$editItem || $item['id'] != $editItem['id'])): ?>
+                                                    <option value="<?php echo $item['id']; ?>" 
+                                                        <?php echo ($editItem && $editItem['parent_id'] == $item['id']) ? 'selected' : ''; ?>>
+                                                        <?php echo htmlspecialchars($item['title']); ?>
+                                                    </option>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
                                         </select>
                                     </div>
 
                                     <div class="form-group">
                                         <label for="icon">Icono (Font Awesome)</label>
-                                        <input type="text" class="form-control" id="icon" name="icon" placeholder="fas fa-home">
-                                        <small class="text-muted">
-                                            Opcional. Ej: fas fa-home, fas fa-user, fas fa-cog
-                                        </small>
+                                        <input type="text" class="form-control" id="icon" name="icon" 
+                                               value="<?php echo $editItem ? htmlspecialchars($editItem['icon']) : ''; ?>" placeholder="fas fa-home">
                                     </div>
 
                                     <div class="form-group">
                                         <label for="target">Destino del Enlace</label>
                                         <select class="form-control" id="target" name="target">
-                                            <option value="_self">Misma ventana</option>
-                                            <option value="_blank">Nueva ventana</option>
+                                            <option value="_self" <?php echo (!$editItem || $editItem['target'] == '_self') ? 'selected' : ''; ?>>Misma ventana</option>
+                                            <option value="_blank" <?php echo ($editItem && $editItem['target'] == '_blank') ? 'selected' : ''; ?>>Nueva ventana</option>
                                         </select>
                                     </div>
 
                                     <div class="form-group">
                                         <div class="custom-control custom-switch">
-                                            <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" checked>
+                                            <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" 
+                                                   <?php echo (!$editItem || $editItem['is_active']) ? 'checked' : ''; ?>>
                                             <label class="custom-control-label" for="is_active">Elemento Activo</label>
                                         </div>
                                     </div>
@@ -547,12 +508,14 @@ $menuLocations = [
                                     </div>
                                 </div>
                                 <div class="card-footer">
-                                    <button type="submit" class="btn btn-primary btn-block" id="submitBtn">
-                                        <i class="fas fa-save"></i> Crear Elemento
+                                    <button type="submit" class="btn btn-primary btn-block">
+                                        <i class="fas fa-save"></i> <?php echo $editItem ? 'Actualizar' : 'Crear'; ?> Elemento
                                     </button>
-                                    <button type="button" class="btn btn-secondary btn-block" onclick="resetForm()" id="cancelBtn" style="display: none;">
-                                        <i class="fas fa-times"></i> Cancelar
-                                    </button>
+                                    <?php if ($editItem): ?>
+                                        <a href="?" class="btn btn-secondary btn-block">
+                                            <i class="fas fa-times"></i> Cancelar
+                                        </a>
+                                    <?php endif; ?>
                                 </div>
                             </form>
                         </div>
@@ -567,6 +530,98 @@ $menuLocations = [
     <?php include '../../includes/footer.php'; ?>
 </div>
 
+<?php
+function renderMenuItemCard($item, $level = 0) {
+    $childClass = $level > 0 ? 'menu-item-child' : '';
+    $statusClass = $item['is_active'] ? '' : 'inactive-item';
+    ?>
+    <div class="card menu-item-card <?php echo $childClass; ?> <?php echo $statusClass; ?>">
+        <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">
+                        <?php if ($item['icon']): ?>
+                            <i class="<?php echo htmlspecialchars($item['icon']); ?> mr-2"></i>
+                        <?php endif; ?>
+                        <?php echo htmlspecialchars($item['title']); ?>
+                        <?php if (!$item['is_active']): ?>
+                            <span class="badge badge-secondary ml-2">Inactivo</span>
+                        <?php endif; ?>
+                    </h6>
+                    <small class="text-muted">
+                        <?php echo htmlspecialchars($item['url']); ?>
+                        <?php if ($item['target'] == '_blank'): ?>
+                            <i class="fas fa-external-link-alt ml-1"></i>
+                        <?php endif; ?>
+                    </small>
+                </div>
+                <div class="menu-item-actions">
+                    <form method="post" style="display: inline;">
+                        <input type="hidden" name="action" value="move_up">
+                        <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Subir">
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                    </form>
+                    <form method="post" style="display: inline;">
+                        <input type="hidden" name="action" value="move_down">
+                        <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Bajar">
+                            <i class="fas fa-arrow-down"></i>
+                        </button>
+                    </form>
+                    <a href="?edit=<?php echo $item['id']; ?>" class="btn btn-sm btn-info" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <form method="post" style="display: inline;">
+                        <input type="hidden" name="action" value="toggle_status">
+                        <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+                        <button type="submit" class="btn btn-sm <?php echo $item['is_active'] ? 'btn-warning' : 'btn-success'; ?>" 
+                                title="<?php echo $item['is_active'] ? 'Ocultar' : 'Mostrar'; ?>">
+                            <i class="fas fa-<?php echo $item['is_active'] ? 'eye-slash' : 'eye'; ?>"></i>
+                        </button>
+                    </form>
+                    <button class="btn btn-sm btn-danger" onclick="confirmDelete(<?php echo $item['id']; ?>, '<?php echo htmlspecialchars($item['title']); ?>')" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <?php if (!empty($item['children'])): ?>
+        <?php foreach ($item['children'] as $child): ?>
+            <?php renderMenuItemCard($child, $level + 1); ?>
+        <?php endforeach; ?>
+    <?php endif; ?>
+    <?php
+}
+?>
+
+<script src="<?php echo ADMINLTE_URL; ?>/plugins/jquery/jquery.min.js"></script>
+<script src="<?php echo ADMINLTE_URL; ?>/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="<?php echo ADMINLTE_URL; ?>/dist/js/adminlte.min.js"></script>
+
+<script>
+function quickFill(title, url, icon) {
+    $('#title').val(title);
+    $('#url').val(url);
+    $('#icon').val(icon);
+}
+
+function showPreview(location) {
+    $('#preview-' + location).toggle();
+}
+
+function confirmDelete(id, name) {
+    $('#elementNameToDelete').text(name);
+    $('#elementIdToDelete').val(id);
+    $('#deleteModal').modal('show');
+}
+</script>
+</body>
+</html>
+
 <!-- Modal de confirmación de eliminación -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog">
@@ -576,259 +631,22 @@ $menuLocations = [
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
-                <p>¿Estás seguro de que deseas eliminar el elemento <strong id="menuItemNameToDelete"></strong>?</p>
-                <p class="text-danger">Esta acción no se puede deshacer.</p>
+                <p>¿Estás seguro de que deseas eliminar el elemento de menú <strong id="elementNameToDelete"></strong>?</p>
+                <p class="text-info">
+                    <i class="fas fa-info-circle"></i> 
+                    Esto solo eliminará el enlace del menú, no afectará páginas o contenido real.
+                </p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                <form method="post" style="display: inline;">
+                <form method="post" style="display: inline;" id="deleteForm">
                     <input type="hidden" name="action" value="delete">
-                    <input type="hidden" name="id" id="menuItemIdToDelete">
-                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                    <input type="hidden" name="id" id="elementIdToDelete">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Eliminar Enlace
+                    </button>
                 </form>
             </div>
         </div>
     </div>
 </div>
-
-<!-- jQuery -->
-<script src="<?php echo ADMINLTE_URL; ?>/plugins/jquery/jquery.min.js"></script>
-<!-- Bootstrap 4 -->
-<script src="<?php echo ADMINLTE_URL; ?>/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
-<!-- Nestable2 -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/nestable2/1.6.0/jquery.nestable.min.js"></script>
-<!-- AdminLTE App -->
-<script src="<?php echo ADMINLTE_URL; ?>/dist/js/adminlte.min.js"></script>
-
-<script>
-$(document).ready(function() {
-    console.log('Iniciando editor de menús...');
-    
-    // Verificar si jQuery y Nestable están disponibles
-    if (typeof $.fn.nestable === 'undefined') {
-        console.error('Nestable no está cargado!');
-        alert('Error: La librería Nestable no se cargó correctamente. Algunas funciones pueden no funcionar.');
-    } else {
-        console.log('Nestable cargado correctamente');
-        
-        // Inicializar Nestable para cada ubicación de menú
-        $('.dd').nestable({
-            maxDepth: 3,
-            group: 1
-        }).on('change', function() {
-            console.log('Orden cambiado');
-            updateMenuOrder($(this));
-        });
-    }
-    
-    // Actualizar opciones de padre cuando cambia la ubicación
-    $('#menu_location').change(function() {
-        updateParentOptions();
-    });
-    
-    // Inicializar opciones de padre
-    updateParentOptions();
-    
-    // Event listeners para botones dinámicos
-    $(document).on('click', '.btn-edit-menu', function(e) {
-        e.preventDefault();
-        console.log('Botón editar clickeado');
-        const item = $(this).data('item');
-        console.log('Item a editar:', item);
-        editMenuItem(item);
-    });
-    
-    $(document).on('click', '.btn-delete-menu', function(e) {
-        e.preventDefault();
-        console.log('Botón eliminar clickeado');
-        const id = $(this).data('id');
-        const title = $(this).data('title');
-        deleteMenuItem(id, title);
-    });
-    
-    // Manejar cambio de tabs
-    $('#menuTabs a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
-        console.log('Tab cambiado');
-        const target = $(e.target).attr('href');
-        const location = target.replace('#menu-', '');
-        $('#menu_location').val(location);
-        updateParentOptions();
-    });
-    
-    // Test para verificar que los botones están presentes
-    console.log('Botones de editar encontrados:', $('.btn-edit-menu').length);
-    console.log('Botones de eliminar encontrados:', $('.btn-delete-menu').length);
-});
-
-function updateParentOptions() {
-    const location = $('#menu_location').val();
-    const currentId = $('#menuItemId').val();
-    
-    // Limpiar opciones
-    $('#parent_id').html('<option value="">Elemento principal</option>');
-    
-    // Agregar elementos de la ubicación seleccionada
-    <?php foreach ($menusByLocation as $loc => $items): ?>
-        if (location === '<?php echo $loc; ?>') {
-            <?php foreach ($items as $item): ?>
-                if (<?php echo $item['id']; ?> != currentId && !<?php echo $item['parent_id']; ?>) {
-                    $('#parent_id').append('<option value="<?php echo $item['id']; ?>"><?php echo htmlspecialchars($item['title']); ?></option>');
-                }
-            <?php endforeach; ?>
-        }
-    <?php endforeach; ?>
-}
-
-function editMenuItem(item) {
-    console.log('Editando item:', item);
-    $('#formTitle').text('Editar Elemento de Menú');
-    $('#formAction').val('update');
-    $('#menuItemId').val(item.id);
-    $('#menu_location').val(item.menu_location);
-    $('#title').val(item.title);
-    $('#url').val(item.url);
-    $('#parent_id').val(item.parent_id || '');
-    $('#icon').val(item.icon || '');
-    $('#target').val(item.target);
-    $('#is_active').prop('checked', item.is_active == 1);
-    $('#submitBtn').html('<i class="fas fa-save"></i> Actualizar Elemento');
-    $('#cancelBtn').show();
-    
-    updateParentOptions();
-    
-    // Scroll al formulario
-    $('html, body').animate({
-        scrollTop: $("#menuForm").offset().top - 100
-    }, 500);
-}
-
-function resetForm() {
-    $('#formTitle').text('Nuevo Elemento de Menú');
-    $('#formAction').val('create');
-    $('#menuItemId').val('');
-    $('#menuForm')[0].reset();
-    $('#is_active').prop('checked', true);
-    $('#submitBtn').html('<i class="fas fa-save"></i> Crear Elemento');
-    $('#cancelBtn').hide();
-    
-    updateParentOptions();
-}
-
-function deleteMenuItem(id, name) {
-    console.log('Eliminando item:', id, name);
-    $('#menuItemNameToDelete').text(name);
-    $('#menuItemIdToDelete').val(id);
-    $('#deleteModal').modal('show');
-}
-
-function quickFill(title, url, icon) {
-    $('#title').val(title);
-    $('#url').val(url);
-    $('#icon').val(icon);
-}
-
-function updateMenuOrder(container) {
-    if (typeof container.nestable !== 'function') {
-        console.error('Nestable no está disponible');
-        return;
-    }
-    
-    const location = container.data('location');
-    const serializedData = container.nestable('serialize');
-    const items = [];
-    
-    function processItems(data, parentId = null, level = 0) {
-        data.forEach((item, index) => {
-            items.push({
-                id: item.id,
-                parent_id: parentId,
-                sort_order: index + 1
-            });
-            
-            if (item.children && item.children.length > 0) {
-                processItems(item.children, item.id, level + 1);
-            }
-        });
-    }
-    
-    processItems(serializedData);
-    
-    // Enviar actualización por AJAX
-    $.post(window.location.href, {
-        action: 'update_order',
-        items: items
-    }).done(function() {
-        console.log('Orden actualizado');
-        // Mostrar mensaje de éxito temporal
-        const alert = $('<div class="alert alert-success alert-dismissible fade show" role="alert">Orden actualizado correctamente <button type="button" class="close" data-dismiss="alert">&times;</button></div>');
-        $('.content').prepend(alert);
-        setTimeout(() => alert.alert('close'), 3000);
-    }).fail(function() {
-        console.error('Error al actualizar orden');
-    });
-}
-
-function showMenuPreview(location) {
-    const menuData = <?php echo json_encode($menusByLocation); ?>;
-    const items = menuData[location] || [];
-    
-    // Construir HTML del menú
-    let html = '<ul>';
-    
-    function buildMenuHTML(items, parentId = null) {
-        let menuHtml = '';
-        items.filter(item => item.parent_id == parentId && item.is_active == 1)
-             .sort((a, b) => a.sort_order - b.sort_order)
-             .forEach(item => {
-                 menuHtml += '<li>';
-                 menuHtml += '<a href="' + item.url + '" target="' + item.target + '">';
-                 if (item.icon) {
-                     menuHtml += '<i class="' + item.icon + ' icon"></i>';
-                 }
-                 menuHtml += item.title;
-                 menuHtml += '</a>';
-                 
-                 const children = items.filter(child => child.parent_id == item.id && child.is_active == 1);
-                 if (children.length > 0) {
-                     menuHtml += '<ul>';
-                     menuHtml += buildMenuHTML(items, item.id);
-                     menuHtml += '</ul>';
-                 }
-                 menuHtml += '</li>';
-             });
-        return menuHtml;
-    }
-    
-    html += buildMenuHTML(items);
-    html += '</ul>';
-    
-    $('#menuPreviewContent').html(html);
-    $('#menuPreviewCard').show();
-    
-    // Scroll a la vista previa
-    $('html, body').animate({
-        scrollTop: $("#menuPreviewCard").offset().top - 100
-    }, 500);
-}
-
-function hideMenuPreview() {
-    $('#menuPreviewCard').hide();
-}
-
-// Funciones de debugging
-function debugMenus() {
-    console.log('=== DEBUG MENÚS ===');
-    console.log('jQuery:', typeof $);
-    console.log('Nestable:', typeof $.fn.nestable);
-    console.log('Botones edit:', $('.btn-edit-menu').length);
-    console.log('Botones delete:', $('.btn-delete-menu').length);
-    console.log('Contenedores dd:', $('.dd').length);
-}
-
-// Ejecutar debug después de cargar todo
-$(window).on('load', function() {
-    setTimeout(debugMenus, 1000);
-});
-</script>
-</body>
-</html>
