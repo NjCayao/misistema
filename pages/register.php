@@ -1,5 +1,5 @@
 <?php
-// pages/register.php - Sistema de registro de usuarios
+// pages/register.php - Sistema de registro actualizado con email integrado
 require_once '../config/database.php';
 require_once '../config/constants.php';
 require_once '../config/functions.php';
@@ -100,8 +100,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ])) {
                 $userId = $db->lastInsertId();
                 
-                // Enviar email de verificación
+                // Enviar email de verificación usando el nuevo sistema
                 $emailSent = sendVerificationEmail($email, $firstName, $verificationCode);
+                
+                // Notificar al admin sobre nuevo usuario (si está habilitado)
+                EmailSystem::notifyNewUser([
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'email' => $email,
+                    'country' => $country
+                ]);
                 
                 if ($emailSent) {
                     setFlashMessage('success', 'Registro exitoso. Revisa tu email para verificar tu cuenta.');
@@ -123,26 +131,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'Error del sistema. Inténtalo más tarde';
         }
     }
-}
-
-// Función para enviar email de verificación
-function sendVerificationEmail($email, $firstName, $code) {
-    $siteName = Settings::get('site_name', 'MiSistema');
-    $subject = "Verifica tu cuenta en $siteName";
-    
-    $body = "
-    <h2>¡Bienvenido a $siteName, $firstName!</h2>
-    <p>Gracias por registrarte. Para completar tu registro, usa el siguiente código:</p>
-    <div style='background: #f8f9fa; padding: 20px; text-align: center; font-size: 24px; font-weight: bold; margin: 20px 0;'>
-        $code
-    </div>
-    <p>Este código expira en " . VERIFICATION_CODE_EXPIRY . " minutos.</p>
-    <p>Si no solicitaste esta cuenta, puedes ignorar este email.</p>
-    <hr>
-    <p><small>Este es un email automático, no respondas a este mensaje.</small></p>
-    ";
-    
-    return sendEmail($email, $subject, $body, true);
 }
 
 $siteName = Settings::get('site_name', 'MiSistema');

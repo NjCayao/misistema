@@ -1,5 +1,5 @@
 <?php
-// pages/verify-email.php - Verificación de email con código de 6 dígitos
+// pages/verify-email.php - Verificación de email actualizada con sistema integrado
 require_once '../config/database.php';
 require_once '../config/constants.php';
 require_once '../config/functions.php';
@@ -53,9 +53,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'Código de verificación inválido';
             } elseif ($user['is_verified']) {
                 $success = 'Tu cuenta ya está verificada';
-                setTimeout(function() {
-                    redirect('/pages/login.php');
-                }, 2000);
+                echo "<script>
+                    setTimeout(function() {
+                        window.location.href = '/pages/login.php';
+                    }, 2000);
+                </script>";
             } elseif (strtotime($user['verification_expires']) < time()) {
                 $codeExpired = true;
                 $errors[] = 'El código de verificación ha expirado';
@@ -68,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ");
                 
                 if ($stmt->execute([$email])) {
-                    // Enviar email de bienvenida
+                    // Enviar email de bienvenida usando el nuevo sistema
                     sendWelcomeEmail($email, $user['first_name']);
                     
                     $success = '¡Cuenta verificada exitosamente! Redirigiendo al login...';
@@ -121,6 +123,7 @@ if (isset($_POST['resend_code'])) {
             ");
             
             if ($stmt->execute([$newCode, $newExpires, $email])) {
+                // Usar el nuevo sistema de email
                 if (sendVerificationEmail($email, $user['first_name'], $newCode)) {
                     $success = 'Nuevo código enviado a tu email';
                     $codeExpired = false;
@@ -136,49 +139,6 @@ if (isset($_POST['resend_code'])) {
         logError("Error reenviando código: " . $e->getMessage());
         $errors[] = 'Error del sistema. Inténtalo más tarde';
     }
-}
-
-// Función para enviar email de verificación
-function sendVerificationEmail($email, $firstName, $code) {
-    $siteName = Settings::get('site_name', 'MiSistema');
-    $subject = "Código de verificación - $siteName";
-    
-    $body = "
-    <h2>Hola $firstName,</h2>
-    <p>Tu código de verificación para $siteName es:</p>
-    <div style='background: #f8f9fa; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; margin: 20px 0; border-radius: 8px; letter-spacing: 3px;'>
-        $code
-    </div>
-    <p>Este código expira en " . VERIFICATION_CODE_EXPIRY . " minutos.</p>
-    <p>Si no solicitaste esta verificación, puedes ignorar este email.</p>
-    <hr>
-    <p><small>Este es un email automático, no respondas a este mensaje.</small></p>
-    ";
-    
-    return sendEmail($email, $subject, $body, true);
-}
-
-// Función para enviar email de bienvenida
-function sendWelcomeEmail($email, $firstName) {
-    $siteName = Settings::get('site_name', 'MiSistema');
-    $subject = "¡Bienvenido a $siteName!";
-    
-    $body = "
-    <h2>¡Bienvenido a $siteName, $firstName!</h2>
-    <p>Tu cuenta ha sido verificada exitosamente. Ya puedes:</p>
-    <ul>
-        <li>Explorar nuestro catálogo de productos</li>
-        <li>Descargar productos gratuitos</li>
-        <li>Comprar productos premium</li>
-        <li>Acceder a tu historial de compras</li>
-    </ul>
-    <p><a href='" . SITE_URL . "/pages/login.php' style='background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;'>Iniciar Sesión</a></p>
-    <p>¡Gracias por unirte a nuestra comunidad!</p>
-    <hr>
-    <p><small>Equipo de $siteName</small></p>
-    ";
-    
-    return sendEmail($email, $subject, $body, true);
 }
 
 $siteName = Settings::get('site_name', 'MiSistema');

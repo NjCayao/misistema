@@ -69,7 +69,7 @@ RedirectMatch 403 ^/vendor/(?!adminlte|fontawesome)
 # Redirecciones principales - URLs amigables
 
 # Página de productos
-RewriteRule ^productos/?$ pages/products.php [QSA,L]
+RewriteRule ^producto/([a-zA-Z0-9\-]+)/?$ pages/product.php?slug=$1 [L,QSA]
 
 # Producto individual
 RewriteRule ^producto/([a-zA-Z0-9\-]+)/?$ pages/product.php?slug=$1 [QSA,L]

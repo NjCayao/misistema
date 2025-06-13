@@ -2,6 +2,9 @@
 // config/functions.php
 session_start();
 
+// Incluir el sistema de email
+require_once __DIR__ . '/email.php';
+
 // Función para obtener configuraciones del sitio
 function getSetting($key, $default = '') {
     static $settings = null;
@@ -50,7 +53,8 @@ function generateOrderNumber() {
 
 // Función para formatear precio
 function formatPrice($price) {
-    return '$' . number_format($price, 2);
+    $currencySymbol = Settings::get('currency_symbol', '$');
+    return $currencySymbol . number_format($price, 2);
 }
 
 // Función para verificar si es admin
@@ -61,6 +65,72 @@ function isAdmin() {
 // Función para verificar si usuario está logueado
 function isLoggedIn() {
     return isset($_SESSION[SESSION_NAME]) && !empty($_SESSION[SESSION_NAME]);
+}
+
+// Función para obtener datos del usuario logueado
+function getCurrentUser() {
+    if (!isLoggedIn()) {
+        return null;
+    }
+    
+    $userId = $_SESSION[SESSION_NAME]['user_id'];
+    $db = Database::getInstance()->getConnection();
+    $stmt = $db->prepare("SELECT * FROM users WHERE id = ? AND is_active = 1");
+    $stmt->execute([$userId]);
+    return $stmt->fetch();
+}
+
+// Función para login de usuario
+function loginUser($email, $password) {
+    try {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("
+            SELECT id, email, password, first_name, last_name, is_verified, is_active 
+            FROM users 
+            WHERE email = ? AND is_active = 1
+        ");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+        
+        if (!$user) {
+            return ['success' => false, 'message' => 'Usuario no encontrado'];
+        }
+        
+        if (!$user['is_verified']) {
+            return ['success' => false, 'message' => 'Cuenta no verificada. Revisa tu email'];
+        }
+        
+        if (!verifyPassword($password, $user['password'])) {
+            return ['success' => false, 'message' => 'Contraseña incorrecta'];
+        }
+        
+        // Actualizar último login
+        $stmt = $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+        $stmt->execute([$user['id']]);
+        
+        // Crear sesión
+        $_SESSION[SESSION_NAME] = [
+            'user_id' => $user['id'],
+            'email' => $user['email'],
+            'first_name' => $user['first_name'],
+            'last_name' => $user['last_name'],
+            'login_time' => time()
+        ];
+        
+        return ['success' => true, 'user' => $user];
+        
+    } catch (Exception $e) {
+        logError("Error en login: " . $e->getMessage());
+        return ['success' => false, 'message' => 'Error del sistema'];
+    }
+}
+
+// Función para logout de usuario
+function logoutUser() {
+    if (isset($_SESSION[SESSION_NAME])) {
+        unset($_SESSION[SESSION_NAME]);
+    }
+    session_destroy();
 }
 
 // Función para redireccionar
@@ -182,16 +252,17 @@ function uploadFile($file, $destination, $allowedTypes = null) {
     }
 }
 
-// Función para enviar email
-function sendEmail($to, $subject, $body, $isHTML = true) {
-    // Aquí implementaremos PHPMailer más adelante
-    // Por ahora simulamos el envío
-    return true;
-}
+
 
 // Función para log de errores
 function logError($message, $file = 'error.log') {
     $logPath = __DIR__ . '/../logs/' . $file;
+    
+    // Crear directorio de logs si no existe
+    if (!is_dir(dirname($logPath))) {
+        mkdir(dirname($logPath), 0755, true);
+    }
+    
     $timestamp = date('Y-m-d H:i:s');
     $logMessage = "[$timestamp] $message" . PHP_EOL;
     file_put_contents($logPath, $logMessage, FILE_APPEND | LOCK_EX);
@@ -211,4 +282,45 @@ function hashPassword($password) {
 function verifyPassword($password, $hash) {
     return password_verify($password, $hash);
 }
+
+// Función para generar token de recuperación
+function generateResetToken() {
+    return bin2hex(random_bytes(32));
+}
+
+// Función para limpiar URLs
+function cleanUrl($url) {
+    return filter_var($url, FILTER_SANITIZE_URL);
+}
+
+// Función para truncar texto
+function truncateText($text, $length = 100, $suffix = '...') {
+    if (mb_strlen($text) <= $length) {
+        return $text;
+    }
+    return mb_substr($text, 0, $length) . $suffix;
+}
+
+// Función para formatear fecha
+function formatDate($date, $format = 'd/m/Y') {
+    return date($format, strtotime($date));
+}
+
+// Función para formatear fecha con hora
+function formatDateTime($datetime, $format = 'd/m/Y H:i') {
+    return date($format, strtotime($datetime));
+}
+
+// Función para tiempo relativo (hace X minutos, etc.)
+function timeAgo($datetime) {
+    $time = time() - strtotime($datetime);
+    
+    if ($time < 60) return 'hace unos segundos';
+    if ($time < 3600) return 'hace ' . floor($time/60) . ' minutos';
+    if ($time < 86400) return 'hace ' . floor($time/3600) . ' horas';
+    if ($time < 2592000) return 'hace ' . floor($time/86400) . ' días';
+    if ($time < 31536000) return 'hace ' . floor($time/2592000) . ' meses';
+    return 'hace ' . floor($time/31536000) . ' años';
+}
+
 ?>
