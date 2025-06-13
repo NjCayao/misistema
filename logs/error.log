@@ -8,3 +8,7 @@
 [2025-06-12 23:25:46] Error en productos: Ya existe esa versión para este producto
 [2025-06-12 23:29:57] Error en productos: Ya existe esa versión para este producto
 [2025-06-12 23:30:57] Error en productos: Ya existe esa versión para este producto
+[2025-06-13 08:20:32] Error en página dinámica: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'view_count' in 'field list'
+[2025-06-13 08:20:39] Error en página dinámica: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'view_count' in 'field list'
+[2025-06-13 08:23:14] Error en página dinámica: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'view_count' in 'field list'
+[2025-06-13 08:23:25] Error en página dinámica: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'view_count' in 'field list'

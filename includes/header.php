@@ -28,7 +28,26 @@ try {
     $mainMenuItems = [];
     $subMenus = [];
 }
+
+// Función helper para procesar URLs
+function processMenuUrl($url) {
+    // Si la URL ya tiene http:// o https://, devolverla tal como está
+    if (strpos($url, 'http://') === 0 || strpos($url, 'https://') === 0) {
+        return $url;
+    }
+    
+    // Si empieza con /, agregar SITE_URL
+    if (strpos($url, '/') === 0) {
+        return SITE_URL . $url;
+    }
+    
+    // Si no empieza con /, agregar SITE_URL/
+    return SITE_URL . '/' . $url;
+}
+
+
 ?>
+
 
 <header class="main-header">
     <!-- Top Bar -->
@@ -82,18 +101,18 @@ try {
                                         <?php echo htmlspecialchars($_SESSION['user_name']); ?>
                                     </a>
                                     <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="/dashboard"><i class="fas fa-tachometer-alt me-2"></i>Mi Dashboard</a></li>
-                                        <li><a class="dropdown-item" href="/mis-compras"><i class="fas fa-shopping-bag me-2"></i>Mis Compras</a></li>
-                                        <li><a class="dropdown-item" href="/perfil"><i class="fas fa-user me-2"></i>Mi Perfil</a></li>
+                                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/dashboard.php"><i class="fas fa-tachometer-alt me-2"></i>Mi Dashboard</a></li>
+                                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/purchases.php"><i class="fas fa-shopping-bag me-2"></i>Mis Compras</a></li>
+                                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/profile.php"><i class="fas fa-user me-2"></i>Mi Perfil</a></li>
                                         <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
+                                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/logout.php"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
                                     </ul>
                                 </div>
                             <?php else: ?>
-                                <a href="/login" class="user-link">
+                                <a href="<?php echo SITE_URL; ?>/pages/login.php" class="user-link">
                                     <i class="fas fa-sign-in-alt me-1"></i>Iniciar Sesión
                                 </a>
-                                <a href="/register" class="user-link ms-2">
+                                <a href="<?php echo SITE_URL; ?>/pages/register.php" class="user-link ms-2">
                                     <i class="fas fa-user-plus me-1"></i>Registrarse
                                 </a>
                             <?php endif; ?>
@@ -136,7 +155,7 @@ try {
                                 <ul class="dropdown-menu">
                                     <?php foreach ($subMenus[$item['id']] as $subItem): ?>
                                         <li>
-                                            <a class="dropdown-item" href="<?php echo $subItem['url']; ?>" <?php echo $subItem['target'] == '_blank' ? 'target="_blank"' : ''; ?>>
+                                            <a class="dropdown-item" href="<?php echo processMenuUrl($subItem['url']); ?>" <?php echo $subItem['target'] == '_blank' ? 'target="_blank"' : ''; ?>>
                                                 <?php if ($subItem['icon']): ?>
                                                     <i class="<?php echo $subItem['icon']; ?> me-2"></i>
                                                 <?php endif; ?>
@@ -146,7 +165,7 @@ try {
                                     <?php endforeach; ?>
                                 </ul>
                             <?php else: ?>
-                                <a class="nav-link" href="<?php echo $item['url']; ?>" <?php echo $item['target'] == '_blank' ? 'target="_blank"' : ''; ?>>
+                                <a class="nav-link" href="<?php echo processMenuUrl($item['url']); ?>" <?php echo $item['target'] == '_blank' ? 'target="_blank"' : ''; ?>>
                                     <?php if ($item['icon']): ?>
                                         <i class="<?php echo $item['icon']; ?> me-1"></i>
                                     <?php endif; ?>
@@ -161,7 +180,7 @@ try {
                 <div class="navbar-actions d-flex align-items-center">
                     <!-- Search -->
                     <div class="search-box me-3">
-                        <form class="d-flex" action="/buscar" method="GET">
+                        <form class="d-flex" action="<?php echo SITE_URL; ?>/pages/search.php" method="GET">
                             <div class="input-group">
                                 <input class="form-control" type="search" placeholder="Buscar productos..." name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>">
                                 <button class="btn btn-outline-primary" type="submit">
@@ -173,7 +192,7 @@ try {
                     
                     <!-- Cart -->
                     <div class="cart-icon">
-                        <a href="/carrito" class="btn btn-outline-primary position-relative">
+                        <a href="<?php echo SITE_URL; ?>/pages/cart.php" class="btn btn-outline-primary position-relative">
                             <i class="fas fa-shopping-cart"></i>
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cart-count">
                                 0
@@ -184,11 +203,11 @@ try {
                     <!-- Mobile User Menu -->
                     <div class="mobile-user d-lg-none ms-3">
                         <?php if (isset($_SESSION['user_id'])): ?>
-                            <a href="/dashboard" class="btn btn-sm btn-primary">
+                            <a href="<?php echo SITE_URL; ?>/pages/dashboard.php" class="btn btn-sm btn-primary">
                                 <i class="fas fa-user"></i>
                             </a>
                         <?php else: ?>
-                            <a href="/login" class="btn btn-sm btn-outline-primary">
+                            <a href="<?php echo SITE_URL; ?>/pages/login.php" class="btn btn-sm btn-outline-primary">
                                 <i class="fas fa-sign-in-alt"></i>
                             </a>
                         <?php endif; ?>

@@ -24,7 +24,11 @@ function getSetting($key, $default = '') {
 // Función para actualizar configuración
 function updateSetting($key, $value) {
     $db = Database::getInstance()->getConnection();
-    $stmt = $db->prepare("UPDATE settings SET setting_value = ?, updated_at = NOW() WHERE setting_key = ?");
+    $stmt = $db->prepare("
+        INSERT INTO settings (setting_key, setting_value, updated_at) 
+        VALUES (?, ?, NOW()) 
+        ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()
+    ");
     return $stmt->execute([$value, $key]);
 }
 
@@ -51,9 +55,10 @@ function generateOrderNumber() {
     return 'ORD-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
 }
 
-// Función para formatear precio
+// Función para formatear precio - CORREGIDA
 function formatPrice($price) {
-    $currencySymbol = Settings::get('currency_symbol', '$');
+    // Usar getSetting en lugar de Settings::get
+    $currencySymbol = getSetting('currency_symbol', '$');
     return $currencySymbol . number_format($price, 2);
 }
 
@@ -251,8 +256,6 @@ function uploadFile($file, $destination, $allowedTypes = null) {
         return ['success' => false, 'message' => 'Error al mover el archivo al destino final'];
     }
 }
-
-
 
 // Función para log de errores
 function logError($message, $file = 'error.log') {
