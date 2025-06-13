@@ -174,11 +174,12 @@ foreach ($banners as $banner) {
 // Definir posiciones disponibles
 $positions = [
     'home_slider' => 'Slider Principal (Home)',
-    'home_hero' => 'Hero Section (Home)',
-    'sidebar' => 'Sidebar',
-    'footer' => 'Footer',
-    'header' => 'Header',
-    'promotion' => 'Promociones'
+    'promotion' => 'Promociones',
+    'home_hero' => 'Hero Section (tarjetas)',
+    // 'footer' => 'Footer',
+    // 'header' => 'Header',
+    'sidebar' => 'Sidebar (Footer)'
+    
 ];
 ?>
 <!DOCTYPE html>

@@ -86,3 +86,8 @@ misistema/
 •	Subida archivos: Upload de ZIP/RAR por cada versión
 •	Pricing: Campo "precio deseado" → cálculo automático precio final
 •	Límites: Configurar re-descargas y meses de actualización
+
+13/06/25 FASE 3: FRONTEND PÚBLICO - terminado 
+13/06/25 correcion de header y footer enlaces 
+13/06/25 correcion de banner slider 
+13/06/25 correcion para traer las imagenes del modulo contenido al index principal
