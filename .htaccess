@@ -66,9 +66,13 @@ RedirectMatch 403 ^/vendor/(?!adminlte|fontawesome)
     Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
 </IfModule>
 
+# Redirección específica para admin
+RewriteRule ^admin/?$ admin/index.php [QSA,L]
+
 # Redirecciones principales - URLs amigables
 
 # Página de productos
+# RewriteRule ^(?!admin)([a-zA-Z0-9\-]+)/?$ pages/page.php?slug=$1 [QSA,L]
 RewriteRule ^producto/([a-zA-Z0-9\-]+)/?$ pages/product.php?slug=$1 [L,QSA]
 
 # Producto individual

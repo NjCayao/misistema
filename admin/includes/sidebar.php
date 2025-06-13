@@ -20,7 +20,7 @@
         <!-- Sidebar Menu -->
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-                
+
                 <!-- Dashboard -->
                 <li class="nav-item">
                     <a href="<?php echo ADMIN_URL; ?>/index.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' && !isset($_GET['page']) ? 'active' : ''; ?>">
@@ -71,16 +71,42 @@
                     </a>
                 </li>
 
-                <!-- Usuarios -->
                 <li class="nav-item">
-                    <a href="<?php echo ADMIN_URL; ?>/pages/users/" class="nav-link">
+                    <a href="#" class="nav-link">
                         <i class="nav-icon fas fa-users"></i>
                         <p>
                             Usuarios
-                            <span class="badge badge-info right">Próximo</span>
+                            <i class="fas fa-angle-left right"></i>
                         </p>
                     </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="<?php echo ADMIN_URL; ?>/pages/users/index.php" class="nav-link">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>Todos los Usuarios</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?php echo ADMIN_URL; ?>/pages/users/create.php" class="nav-link">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>Nuevo Usuario</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?php echo ADMIN_URL; ?>/pages/users/index.php?status=active" class="nav-link">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>Usuarios Activos</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?php echo ADMIN_URL; ?>/pages/users/index.php?verified=unverified" class="nav-link">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>Sin Verificar</p>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
+
 
                 <!-- Reportes -->
                 <li class="nav-item">
@@ -215,23 +241,23 @@
 
 <!-- Scripts adicionales para funcionalidades del sidebar -->
 <script>
-function clearCache() {
-    if (confirm('¿Limpiar cache del sistema?')) {
-        // Aquí implementaremos la limpieza de cache
-        toastr.info('Funcionalidad próximamente disponible');
+    function clearCache() {
+        if (confirm('¿Limpiar cache del sistema?')) {
+            // Aquí implementaremos la limpieza de cache
+            toastr.info('Funcionalidad próximamente disponible');
+        }
     }
-}
 
-function generateBackup() {
-    if (confirm('¿Generar backup de la base de datos?')) {
-        // Aquí implementaremos el backup
-        toastr.info('Funcionalidad próximamente disponible');
+    function generateBackup() {
+        if (confirm('¿Generar backup de la base de datos?')) {
+            // Aquí implementaremos el backup
+            toastr.info('Funcionalidad próximamente disponible');
+        }
     }
-}
 
-function showProgress() {
-    // Modal con progreso del desarrollo
-    const progressModal = `
+    function showProgress() {
+        // Modal con progreso del desarrollo
+        const progressModal = `
         <div class="modal fade" id="progressModal" tabindex="-1">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
@@ -260,9 +286,9 @@ function showProgress() {
                         
                         <div class="progress-group">
                             <span class="progress-text">Fase 3: Frontend Público</span>
-                            <span class="float-right"><b>0%</b></span>
+                            <span class="float-right"><b>100%</b></span>
                             <div class="progress progress-sm">
-                                <div class="progress-bar bg-warning" style="width: 0%"></div>
+                                <div class="progress-bar bg-success" style="width: 100%"></div>
                             </div>
                         </div>
                         
@@ -293,15 +319,15 @@ function showProgress() {
                         <hr>
                         <div class="progress-group">
                             <span class="progress-text"><strong>Progreso Total</strong></span>
-                            <span class="float-right"><b>47%</b></span>
+                            <span class="float-right"><b>62%</b></span>
                             <div class="progress">
-                                <div class="progress-bar bg-primary progress-bar-striped" style="width: 47%"></div>
+                                <div class="progress-bar bg-primary progress-bar-striped" style="width: 62%"></div>
                             </div>
                         </div>
                         
                         <div class="alert alert-info mt-3">
                             <h5><i class="icon fas fa-info"></i> Próximo:</h5>
-                            Fase 3.1 - Diseño Base del Frontend
+                            Fase 4 - Sistema de Pagos: Implementación de pasarelas de pago, gestión de transacciones y seguridad.
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -311,14 +337,14 @@ function showProgress() {
             </div>
         </div>
     `;
-    
-    // Remover modal anterior si existe
-    $('#progressModal').remove();
-    
-    // Agregar modal al body
-    $('body').append(progressModal);
-    
-    // Mostrar modal
-    $('#progressModal').modal('show');
-}
+
+        // Remover modal anterior si existe
+        $('#progressModal').remove();
+
+        // Agregar modal al body
+        $('body').append(progressModal);
+
+        // Mostrar modal
+        $('#progressModal').modal('show');
+    }
 </script>
