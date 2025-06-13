@@ -35,13 +35,16 @@ misistema/
 │   └── modals.php                  # Modales reutilizables
 │
 ├── pages/                          # Páginas públicas
-│   ├── product.php                 # Página de producto
-│   ├── category.php                # Página de categoría
-│   ├── cart.php                    # Carrito de compras
-│   ├── checkout.php                # Proceso de pago
-│   ├── login.php                   # Login de usuarios
-│   ├── register.php                # Registro de usuarios
-│   └── dashboard.php               # Dashboard del cliente
+│   ├── products.php                # ✅ Catálogo de productos
+│   ├── product.php                 # ✅ Página de producto individual
+│   ├── category.php                # ✅ Página de categoría
+│   ├── search.php                  # ✅ Sistema de búsqueda
+│   ├── page.php                    # ✅ Páginas dinámicas del CMS
+│   ├── cart.php                    # 
+│   ├── checkout.php                # 
+│   ├── login.php                   # 
+│   ├── register.php                # 
+│   └── dashboard.php               # 
 │
 ├── api/                            # APIs y webhooks
 │   ├── payments/                   # Webhooks de pagos

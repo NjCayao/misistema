@@ -1,0 +1,142 @@
+# .htaccess - URLs Amigables para MiSistema
+RewriteEngine On
+
+# Configuraciones de seguridad
+ServerSignature Off
+Options -Indexes
+
+# Proteger directorios sensibles
+RedirectMatch 403 ^/admin/includes/
+RedirectMatch 403 ^/config/
+RedirectMatch 403 ^/logs/
+RedirectMatch 403 ^/vendor/(?!adminlte|fontawesome)
+
+# Proteger archivos sensibles
+<Files "*.log">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files "*.sql">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files ".env">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Compresión GZIP
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+</IfModule>
+
+# Cache de archivos estáticos
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/pdf "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType application/x-javascript "access plus 1 month"
+    ExpiresByType application/x-shockwave-flash "access plus 1 month"
+    ExpiresByType image/x-icon "access plus 1 year"
+    ExpiresDefault "access plus 2 days"
+</IfModule>
+
+# Headers de seguridad
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options DENY
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
+
+# Redirecciones principales - URLs amigables
+
+# Página de productos
+RewriteRule ^productos/?$ pages/products.php [QSA,L]
+
+# Producto individual
+RewriteRule ^producto/([a-zA-Z0-9\-]+)/?$ pages/product.php?slug=$1 [QSA,L]
+
+# Categoría específica
+RewriteRule ^categoria/([a-zA-Z0-9\-]+)/?$ pages/category.php?slug=$1 [QSA,L]
+
+# Página de búsqueda
+RewriteRule ^buscar/?$ pages/search.php [QSA,L]
+
+# Carrito de compras
+RewriteRule ^carrito/?$ pages/cart.php [QSA,L]
+
+# Proceso de checkout
+RewriteRule ^checkout/?$ pages/checkout.php [QSA,L]
+
+# Páginas de usuario
+RewriteRule ^login/?$ pages/login.php [QSA,L]
+RewriteRule ^register/?$ pages/register.php [QSA,L]
+RewriteRule ^logout/?$ pages/logout.php [QSA,L]
+RewriteRule ^dashboard/?$ pages/dashboard.php [QSA,L]
+RewriteRule ^mis-compras/?$ pages/dashboard.php?section=orders [QSA,L]
+RewriteRule ^perfil/?$ pages/dashboard.php?section=profile [QSA,L]
+
+# Páginas dinámicas del CMS (debe ir al final para no interferir)
+RewriteRule ^([a-zA-Z0-9\-]+)/?$ pages/page.php?slug=$1 [QSA,L]
+
+# API endpoints
+RewriteRule ^api/([a-zA-Z0-9\-/]+)/?$ api/$1.php [QSA,L]
+
+# Webhooks de pagos
+RewriteRule ^webhook/stripe/?$ api/payments/stripe_webhook.php [QSA,L]
+RewriteRule ^webhook/paypal/?$ api/payments/paypal_webhook.php [QSA,L]
+RewriteRule ^webhook/mercadopago/?$ api/payments/mercadopago_webhook.php [QSA,L]
+
+# Descargas protegidas
+RewriteRule ^download/([0-9]+)/?$ api/downloads/secure_download.php?id=$1 [QSA,L]
+
+# Sitemap dinámico
+RewriteRule ^sitemap\.xml$ api/sitemap.php [QSA,L]
+
+# Robots.txt dinámico
+RewriteRule ^robots\.txt$ api/robots.php [QSA,L]
+
+# Redirecciones 301 para compatibilidad (si migras de otro sistema)
+# RewriteRule ^old-products/?$ /productos [R=301,L]
+# RewriteRule ^product/([0-9]+)/?$ /producto/$1 [R=301,L]
+
+# Manejo de errores personalizados
+ErrorDocument 404 /404.php
+ErrorDocument 403 /403.php
+ErrorDocument 500 /500.php
+
+# Configuración para subida de archivos
+php_value upload_max_filesize 50M
+php_value post_max_size 50M
+php_value max_execution_time 300
+php_value max_input_time 300
+php_value memory_limit 256M
+
+# Configuración de sesiones
+php_value session.cookie_httponly 1
+php_value session.cookie_secure 0
+php_value session.use_strict_mode 1
+
+# Prevenir acceso directo a archivos PHP sensibles
+<FilesMatch "^(config|functions|database|settings)\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
