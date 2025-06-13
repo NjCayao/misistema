@@ -534,9 +534,11 @@ try {
                                     <i class="fas fa-code"></i>
                                 </div>
                                 <div class="stat-content">
-                                    <h3 class="stat-number" data-target="<?php echo $totalProducts; ?>">0</h3>
-                                    <p class="stat-label">Projects</p>
-                                    <div class="stat-code">&lt;/projects&gt;</div>
+                                    <!-- <h3 class="stat-number" data-target="<?php echo $totalProducts; ?>">0</h3> -->
+                                    <h3 class="stat-number">Proyectos</h3>
+                                    <p class="stat-label">Realizados</p>
+                                    <h3 class="stat-number">500+</h3>                                    
+                                    <!-- <div class="stat-code">&lt;/projects&gt;</div> -->
                                 </div>
                                 <div class="stat-glow"></div>
                             </div>
@@ -548,9 +550,10 @@ try {
                                     <i class="fas fa-star"></i>
                                 </div>
                                 <div class="stat-content">
-                                    <h3 class="stat-number" data-target="4.9">0</h3>
-                                    <p class="stat-label">Rating</p>
-                                    <div class="stat-code">★★★★★</div>
+                                    <h3 class="stat-number" data-target="4.9">8.9</h3>
+                                    <p class="stat-label">Clasificación</p>
+                                    <h3 class="stat-number">★★★★★</h3>  
+                                    <!-- <div class="stat-code">★★★★★</div> -->
                                 </div>
                                 <div class="stat-glow"></div>
                             </div>
