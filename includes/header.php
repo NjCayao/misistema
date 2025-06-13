@@ -192,9 +192,9 @@ function processMenuUrl($url) {
                     
                     <!-- Cart -->
                     <div class="cart-icon">
-                        <a href="<?php echo SITE_URL; ?>/pages/cart.php" class="btn btn-outline-primary position-relative">
+                        <a href="#" class="btn btn-outline-primary position-relative" data-bs-toggle="modal" data-bs-target="#cartModal">
                             <i class="fas fa-shopping-cart"></i>
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cart-count">
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cart-count" style="display: none;">
                                 0
                             </span>
                         </a>
@@ -217,3 +217,11 @@ function processMenuUrl($url) {
         </div>
     </nav>
 </header>
+
+<!-- Modal del Carrito -->
+<?php 
+// Incluir el carrito solo si existe
+if (file_exists(__DIR__ . '/cart_modal.php')) {
+    include __DIR__ . '/cart_modal.php';
+}
+?>
