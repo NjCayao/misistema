@@ -13,9 +13,94 @@ if (!isAdmin()) {
 $success = '';
 $error = '';
 
+// Manejar mensajes de éxito de redirecciones (Patrón PRG)
+if (isset($_GET['success'])) {
+    switch ($_GET['success']) {
+        case 'saved':
+            $success = 'Configuración guardada exitosamente';
+            break;
+        case 'logo-updated':
+            $success = 'Logo actualizado exitosamente';
+            break;
+        case 'favicon-updated':
+            $success = 'Favicon actualizado exitosamente';
+            break;
+        case 'images-updated':
+            $success = 'Imágenes actualizadas exitosamente';
+            break;
+    }
+}
+
 // Procesar formulario
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        // Manejar subida de logo
+        if (isset($_FILES['site_logo']) && $_FILES['site_logo']['error'] === UPLOAD_ERR_OK) {
+            $logoResult = uploadFile($_FILES['site_logo'], UPLOADS_PATH . '/logos');
+            if ($logoResult['success']) {
+                // Eliminar logo anterior si existe
+                $oldLogo = Settings::get('site_logo', '');
+                if ($oldLogo && file_exists(UPLOADS_PATH . '/logos/' . $oldLogo)) {
+                    unlink(UPLOADS_PATH . '/logos/' . $oldLogo);
+                }
+                
+                Settings::set('site_logo', $logoResult['filename']);
+                redirect($_SERVER['PHP_SELF'] . '?success=logo-updated');
+            } else {
+                throw new Exception('Error al subir logo: ' . $logoResult['message']);
+            }
+        }
+
+        // Manejar subida de favicon
+        if (isset($_FILES['site_favicon']) && $_FILES['site_favicon']['error'] === UPLOAD_ERR_OK) {
+            $faviconResult = uploadFile($_FILES['site_favicon'], UPLOADS_PATH . '/logos');
+            if ($faviconResult['success']) {
+                // Eliminar favicon anterior si existe
+                $oldFavicon = Settings::get('site_favicon', '');
+                if ($oldFavicon && file_exists(UPLOADS_PATH . '/logos/' . $oldFavicon)) {
+                    unlink(UPLOADS_PATH . '/logos/' . $oldFavicon);
+                }
+                
+                Settings::set('site_favicon', $faviconResult['filename']);
+                redirect($_SERVER['PHP_SELF'] . '?success=favicon-updated');
+            } else {
+                throw new Exception('Error al subir favicon: ' . $faviconResult['message']);
+            }
+        }
+
+        // Manejar subida de ambas imágenes
+        $logoUploaded = false;
+        $faviconUploaded = false;
+
+        if (isset($_FILES['site_logo']) && $_FILES['site_logo']['error'] === UPLOAD_ERR_OK) {
+            $logoResult = uploadFile($_FILES['site_logo'], UPLOADS_PATH . '/logos');
+            if ($logoResult['success']) {
+                $oldLogo = Settings::get('site_logo', '');
+                if ($oldLogo && file_exists(UPLOADS_PATH . '/logos/' . $oldLogo)) {
+                    unlink(UPLOADS_PATH . '/logos/' . $oldLogo);
+                }
+                Settings::set('site_logo', $logoResult['filename']);
+                $logoUploaded = true;
+            } else {
+                throw new Exception('Error al subir logo: ' . $logoResult['message']);
+            }
+        }
+
+        if (isset($_FILES['site_favicon']) && $_FILES['site_favicon']['error'] === UPLOAD_ERR_OK) {
+            $faviconResult = uploadFile($_FILES['site_favicon'], UPLOADS_PATH . '/logos');
+            if ($faviconResult['success']) {
+                $oldFavicon = Settings::get('site_favicon', '');
+                if ($oldFavicon && file_exists(UPLOADS_PATH . '/logos/' . $oldFavicon)) {
+                    unlink(UPLOADS_PATH . '/logos/' . $oldFavicon);
+                }
+                Settings::set('site_favicon', $faviconResult['filename']);
+                $faviconUploaded = true;
+            } else {
+                throw new Exception('Error al subir favicon: ' . $faviconResult['message']);
+            }
+        }
+
+        // Solo procesar configuraciones de texto si no hay archivos subidos o si ya se procesaron
         $settings = [
             'site_name' => sanitize($_POST['site_name'] ?? ''),
             'site_description' => sanitize($_POST['site_description'] ?? ''),
@@ -49,27 +134,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Settings::set($key, $value);
         }
 
-        // Manejar subida de logo
-        if (isset($_FILES['site_logo']) && $_FILES['site_logo']['error'] === UPLOAD_ERR_OK) {
-            $logoResult = uploadFile($_FILES['site_logo'], UPLOADS_PATH . '/logos');
-            if ($logoResult['success']) {
-                Settings::set('site_logo', $logoResult['filename']);
-            } else {
-                throw new Exception('Error al subir logo: ' . $logoResult['message']);
-            }
+        // Redirigir según lo que se actualizó
+        if ($logoUploaded && $faviconUploaded) {
+            redirect($_SERVER['PHP_SELF'] . '?success=images-updated');
+        } elseif ($logoUploaded) {
+            redirect($_SERVER['PHP_SELF'] . '?success=logo-updated');
+        } elseif ($faviconUploaded) {
+            redirect($_SERVER['PHP_SELF'] . '?success=favicon-updated');
+        } else {
+            redirect($_SERVER['PHP_SELF'] . '?success=saved');
         }
 
-        // Manejar subida de favicon
-        if (isset($_FILES['site_favicon']) && $_FILES['site_favicon']['error'] === UPLOAD_ERR_OK) {
-            $faviconResult = uploadFile($_FILES['site_favicon'], UPLOADS_PATH . '/logos');
-            if ($faviconResult['success']) {
-                Settings::set('site_favicon', $faviconResult['filename']);
-            } else {
-                throw new Exception('Error al subir favicon: ' . $faviconResult['message']);
-            }
-        }
-
-        $success = 'Configuración guardada exitosamente';
     } catch (Exception $e) {
         $error = $e->getMessage();
         logError("Error en configuración general: " . $e->getMessage());
@@ -111,6 +186,39 @@ $config = [
     <!-- Font Awesome -->
     <link rel="stylesheet" href="<?php echo ADMINLTE_URL; ?>/plugins/fontawesome-free/css/all.min.css">
     <link rel="stylesheet" href="<?php echo ADMINLTE_URL; ?>/dist/css/adminlte.min.css">
+    
+    <style>
+        .current-image-preview, .new-image-preview {
+            padding: 15px;
+            border: 1px solid #e3e6f0;
+            border-radius: 8px;
+            background-color: #f8f9fc;
+        }
+
+        .new-image-preview {
+            border-color: #36b9cc;
+            background-color: #e7f9fc;
+        }
+
+        .no-image-placeholder {
+            text-align: center;
+            padding: 20px;
+            border: 2px dashed #d1d3e2;
+            border-radius: 8px;
+            background-color: #ffffff;
+        }
+
+        .image-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .image-container img {
+            border: 2px solid #dee2e6;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
 </head>
 
 <body class="hold-transition sidebar-mini layout-fixed">
@@ -255,20 +363,82 @@ $config = [
                                         <h3 class="card-title">Logotipos</h3>
                                     </div>
                                     <div class="card-body">
+                                        <!-- Logo del Sitio -->
                                         <div class="form-group">
                                             <label for="site_logo">Logo del Sitio</label>
-                                            <input type="file" class="form-control-file" id="site_logo" name="site_logo" accept="image/*">
+                                            
+                                            <!-- Vista previa actual -->
                                             <?php if ($config['site_logo']): ?>
-                                                <small class="text-muted">Actual: <?php echo $config['site_logo']; ?></small>
+                                                <div class="current-image-preview mb-3">
+                                                    <label class="text-muted">Imagen actual:</label>
+                                                    <div class="image-container">
+                                                        <img src="<?php echo UPLOADS_URL; ?>/logos/<?php echo htmlspecialchars($config['site_logo']); ?>" 
+                                                             alt="Logo actual" class="img-thumbnail" style="max-width: 200px; max-height: 100px;">
+                                                        <small class="d-block text-muted mt-1"><?php echo htmlspecialchars($config['site_logo']); ?></small>
+                                                    </div>
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="current-image-preview mb-3">
+                                                    <div class="no-image-placeholder">
+                                                        <i class="fas fa-image fa-3x text-muted"></i>
+                                                        <p class="text-muted">No hay logo configurado</p>
+                                                    </div>
+                                                </div>
                                             <?php endif; ?>
+                                            
+                                            <!-- Input para nueva imagen -->
+                                            <input type="file" class="form-control-file" id="site_logo" name="site_logo" accept="image/*">
+                                            <small class="text-muted">Formatos: JPG, PNG, GIF. Máximo 2MB. Recomendado: 200x50px</small>
+                                            
+                                            <!-- Vista previa de nueva imagen -->
+                                            <div id="logo-preview" class="new-image-preview mt-3" style="display: none;">
+                                                <label class="text-info">Nueva imagen:</label>
+                                                <div class="image-container">
+                                                    <img id="logo-preview-img" src="" alt="Preview" class="img-thumbnail" style="max-width: 200px; max-height: 100px;">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger mt-2" onclick="clearImagePreview('site_logo', 'logo-preview')">
+                                                        <i class="fas fa-times"></i> Cancelar
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
 
+                                        <!-- Favicon -->
                                         <div class="form-group">
                                             <label for="site_favicon">Favicon</label>
-                                            <input type="file" class="form-control-file" id="site_favicon" name="site_favicon" accept="image/*">
+                                            
+                                            <!-- Vista previa actual -->
                                             <?php if ($config['site_favicon']): ?>
-                                                <small class="text-muted">Actual: <?php echo $config['site_favicon']; ?></small>
+                                                <div class="current-image-preview mb-3">
+                                                    <label class="text-muted">Favicon actual:</label>
+                                                    <div class="image-container">
+                                                        <img src="<?php echo UPLOADS_URL; ?>/logos/<?php echo htmlspecialchars($config['site_favicon']); ?>" 
+                                                             alt="Favicon actual" class="img-thumbnail" style="width: 32px; height: 32px;">
+                                                        <small class="d-block text-muted mt-1"><?php echo htmlspecialchars($config['site_favicon']); ?></small>
+                                                    </div>
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="current-image-preview mb-3">
+                                                    <div class="no-image-placeholder">
+                                                        <i class="fas fa-globe fa-2x text-muted"></i>
+                                                        <p class="text-muted">No hay favicon configurado</p>
+                                                    </div>
+                                                </div>
                                             <?php endif; ?>
+                                            
+                                            <!-- Input para nueva imagen -->
+                                            <input type="file" class="form-control-file" id="site_favicon" name="site_favicon" accept="image/*">
+                                            <small class="text-muted">Formatos: PNG, ICO, GIF. Máximo 1MB. Recomendado: 32x32px o 16x16px</small>
+                                            
+                                            <!-- Vista previa de nueva imagen -->
+                                            <div id="favicon-preview" class="new-image-preview mt-3" style="display: none;">
+                                                <label class="text-info">Nuevo favicon:</label>
+                                                <div class="image-container">
+                                                    <img id="favicon-preview-img" src="" alt="Preview" class="img-thumbnail" style="width: 64px; height: 64px;">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger mt-2" onclick="clearImagePreview('site_favicon', 'favicon-preview')">
+                                                        <i class="fas fa-times"></i> Cancelar
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -369,6 +539,16 @@ $config = [
 
     <script>
         $(document).ready(function() {
+            // Preview para logo
+            $('#site_logo').change(function() {
+                handleImagePreview(this, 'logo-preview', 'logo-preview-img');
+            });
+            
+            // Preview para favicon
+            $('#site_favicon').change(function() {
+                handleImagePreview(this, 'favicon-preview', 'favicon-preview-img');
+            });
+
             // Mostrar/ocultar mensaje de mantenimiento
             $('#maintenance_mode').change(function() {
                 if ($(this).is(':checked')) {
@@ -377,21 +557,61 @@ $config = [
                     $('#maintenance_message').closest('.form-group').hide();
                 }
             });
+        });
 
-            // Preview de imágenes
-            $('#site_logo').change(function() {
-                const file = this.files[0];
-                if (file) {
-                    console.log('Logo seleccionado:', file.name);
+        function handleImagePreview(input, previewContainerId, previewImgId) {
+            const file = input.files[0];
+            
+            if (file) {
+                // Validar tamaño del archivo
+                const maxSize = input.id === 'site_favicon' ? 1024 * 1024 : 2 * 1024 * 1024; // 1MB para favicon, 2MB para logo
+                
+                if (file.size > maxSize) {
+                    alert('El archivo es demasiado grande. Máximo ' + (maxSize / (1024 * 1024)) + 'MB');
+                    input.value = '';
+                    return;
                 }
-            });
+                
+                // Validar tipo de archivo
+                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                if (input.id === 'site_favicon') {
+                    allowedTypes.push('image/x-icon', 'image/vnd.microsoft.icon');
+                }
+                
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Tipo de archivo no permitido. Solo se permiten imágenes.');
+                    input.value = '';
+                    return;
+                }
+                
+                // Crear preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#' + previewImgId).attr('src', e.target.result);
+                    $('#' + previewContainerId).show();
+                }
+                reader.readAsDataURL(file);
+            } else {
+                $('#' + previewContainerId).hide();
+            }
+        }
 
-            $('#site_favicon').change(function() {
-                const file = this.files[0];
-                if (file) {
-                    console.log('Favicon seleccionado:', file.name);
+        function clearImagePreview(inputId, previewContainerId) {
+            $('#' + inputId).val('');
+            $('#' + previewContainerId).hide();
+        }
+
+        // Confirmación antes de enviar formulario con imágenes
+        $('form').on('submit', function(e) {
+            const logoFile = $('#site_logo')[0].files[0];
+            const faviconFile = $('#site_favicon')[0].files[0];
+            
+            if (logoFile || faviconFile) {
+                if (!confirm('¿Estás seguro de actualizar las imágenes? Esta acción reemplazará las imágenes actuales.')) {
+                    e.preventDefault();
+                    return false;
                 }
-            });
+            }
         });
     </script>
 </body>
