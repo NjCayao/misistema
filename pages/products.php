@@ -1,9 +1,9 @@
 <?php
 // pages/products.php - Catálogo de productos con filtros
-require_once '../config/database.php';
-require_once '../config/constants.php';
-require_once '../config/functions.php';
-require_once '../config/settings.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/constants.php';
+require_once __DIR__ . '/../config/functions.php';
+require_once __DIR__ . '/../config/settings.php';
 
 // Verificar modo mantenimiento
 if (Settings::get('maintenance_mode', '0') == '1' && !isAdmin()) {
@@ -201,7 +201,7 @@ $pageTitle = $search ? "Búsqueda: $search" : ($category ? "Categoría: $categor
 </head>
 <body>
     <!-- Header -->
-    <?php include '../includes/header.php'; ?>
+    <?php include __DIR__ . '/../includes/header.php'; ?>
     
     <!-- Breadcrumb -->
     <div class="container mt-4">
@@ -458,7 +458,7 @@ $pageTitle = $search ? "Búsqueda: $search" : ($category ? "Categoría: $categor
     </div>
     
     <!-- Footer -->
-    <?php include '../includes/footer.php'; ?>
+    <?php include __DIR__ . '/../includes/footer.php'; ?>
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

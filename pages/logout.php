@@ -1,9 +1,9 @@
 <?php
 // pages/logout.php - Sistema de logout de usuarios
-require_once '../config/database.php';
-require_once '../config/constants.php';
-require_once '../config/functions.php';
-require_once '../config/settings.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/constants.php';
+require_once __DIR__ . '/../config/functions.php';
+require_once __DIR__ . '/../config/settings.php';
 
 // Verificar que el usuario está logueado
 if (!isLoggedIn()) {

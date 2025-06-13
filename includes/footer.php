@@ -114,10 +114,9 @@ try {
                         <h5 class="footer-title">Enlaces Rápidos</h5>
                         <ul class="footer-links">
                             <li><a href="<?php echo SITE_URL; ?>">Inicio</a></li>
-                            <li><a href="/productos">Productos</a></li>
-                            <li><a href="/sobre-nosotros">Sobre Nosotros</a></li>
-                            <li><a href="/contacto">Contacto</a></li>
-                            <li><a href="/blog">Blog</a></li>
+                            <li><a href="<?php echo SITE_URL; ?>/productos">Productos</a></li>
+                            <li><a href="<?php echo SITE_URL; ?>/sobre-nosotros">Sobre Nosotros</a></li>
+                            <li><a href="<?php echo SITE_URL; ?>/contacto">Contacto</a></li>                            
                         </ul>
                     </div>
                 </div>
@@ -129,7 +128,7 @@ try {
                         <ul class="footer-links">
                             <?php foreach ($footerCategories as $category): ?>
                                 <li>
-                                    <a href="/categoria/<?php echo $category['slug']; ?>">
+                                    <a href="<?php echo SITE_URL; ?>/categoria/<?php echo $category['slug']; ?>">
                                         <?php echo htmlspecialchars($category['name']); ?>
                                     </a>
                                 </li>
@@ -137,49 +136,22 @@ try {
                         </ul>
                     </div>
                 </div>
-                
-                <!-- Legal -->
-                <div class="col-lg-2 col-md-6">
-                    <div class="footer-section">
-                        <h5 class="footer-title">Legal</h5>
-                        <ul class="footer-links">
-                            <?php foreach ($footerMenuItems as $item): ?>
-                                <li>
-                                    <a href="<?php echo $item['url']; ?>" <?php echo $item['target'] == '_blank' ? 'target="_blank"' : ''; ?>>
-                                        <?php echo htmlspecialchars($item['title']); ?>
-                                    </a>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </div>
-                </div>
+                               
                 
                 <!-- Newsletter -->
                 <div class="col-lg-2 col-md-6">
                     <div class="footer-section">
                         <h5 class="footer-title">Newsletter</h5>
                         <p class="newsletter-text">Recibe las últimas noticias y ofertas especiales</p>
-                        <form class="newsletter-form" action="/newsletter" method="POST">
+                        <form class="newsletter-form" action="<?php echo SITE_URL; ?>/newsletter" method="POST">
                             <div class="input-group">
                                 <input type="email" class="form-control" placeholder="Tu email" name="email" required>
                                 <button class="btn btn-primary" type="submit">
                                     <i class="fas fa-paper-plane"></i>
                                 </button>
                             </div>
-                        </form>
+                        </form>                     
                         
-                        <!-- Download App -->
-                        <div class="download-app mt-4">
-                            <h6 class="download-title">Descarga nuestra App</h6>
-                            <div class="app-buttons">
-                                <a href="#" class="app-button">
-                                    <img src="<?php echo ASSETS_URL; ?>/images/google-play.png" alt="Google Play" class="app-store-img">
-                                </a>
-                                <a href="#" class="app-button">
-                                    <img src="<?php echo ASSETS_URL; ?>/images/app-store.png" alt="App Store" class="app-store-img">
-                                </a>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -197,11 +169,11 @@ try {
                 </div>
                 <div class="col-md-6">
                     <div class="footer-bottom-links text-md-end">
-                        <a href="/politica-privacidad">Política de Privacidad</a>
+                        <a href="<?php echo SITE_URL; ?>/politica-de-privacidad">Política de Privacidad</a>
                         <span class="separator">|</span>
-                        <a href="/terminos-condiciones">Términos y Condiciones</a>
+                        <a href="<?php echo SITE_URL; ?>/terminos-condiciones">Términos y Condiciones</a>
                         <span class="separator">|</span>
-                        <a href="/cookies">Cookies</a>
+                        <!-- <a href="<?php echo SITE_URL; ?>/cookies">Cookies</a> -->
                     </div>
                 </div>
             </div>
