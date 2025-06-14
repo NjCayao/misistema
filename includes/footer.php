@@ -169,11 +169,10 @@ try {
                 </div>
                 <div class="col-md-6">
                     <div class="footer-bottom-links text-md-end">
-                        <a href="<?php echo SITE_URL; ?>/politica-de-privacidad">Política de Privacidad</a>
+                        <a href="<?php echo SITE_URL; ?>/poltica-de-privacidad">Política de Privacidad</a>
                         <span class="separator">|</span>
-                        <a href="<?php echo SITE_URL; ?>/terminos-condiciones">Términos y Condiciones</a>
-                        <span class="separator">|</span>
-                        <!-- <a href="<?php echo SITE_URL; ?>/cookies">Cookies</a> -->
+                        <a href="<?php echo SITE_URL; ?>/trminos-y-condiciones">Términos y Condiciones</a>
+                        <span class="separator">|</span>                        
                     </div>
                 </div>
             </div>

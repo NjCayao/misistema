@@ -19,3 +19,13 @@
 [2025-06-13 08:36:56] Error en página dinámica: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'view_count' in 'field list'
 [2025-06-13 08:38:17] Error en página dinámica: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'view_count' in 'field list'
 [2025-06-13 08:38:19] Error en página dinámica: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'view_count' in 'field list'
+[2025-06-13 23:19:55] Error en configuración de pagos: Para habilitar Stripe necesitas las claves API
+[2025-06-13 23:20:12] Error en configuración de pagos: Para habilitar Stripe necesitas las claves API
+[2025-06-13 23:20:18] Error en configuración de pagos: Para habilitar Stripe necesitas las claves API
+[2025-06-13 23:37:30] Error en configuración de pagos: Para habilitar Stripe necesitas las claves API
+[2025-06-13 23:37:41] Error en configuración de pagos: Para habilitar Stripe necesitas las claves API
+[2025-06-13 23:39:13] Error en configuración de pagos: Para habilitar Stripe necesitas las claves API
+[2025-06-13 23:39:32] Error en configuración de pagos: Para habilitar PayPal necesitas Client ID y Secret
+[2025-06-13 23:39:55] Error en configuración de pagos: Para habilitar PayPal necesitas Client ID y Secret
+[2025-06-14 02:47:55] Error en menús: No se puede eliminar un elemento que tiene subelementos. Elimina primero los subelementos.
+[2025-06-14 02:48:00] Error en menús: No se puede eliminar un elemento que tiene subelementos. Elimina primero los subelementos.

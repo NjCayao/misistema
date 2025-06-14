@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $meta_title = sanitize($_POST['meta_title'] ?? '');
                     $meta_description = sanitize($_POST['meta_description'] ?? '');
                     $is_active = isset($_POST['is_active']) ? 1 : 0;
+                    $available_in_menus = isset($_POST['available_in_menus']) ? 1 : 0;
 
                     if (empty($title)) {
                         throw new Exception('El título de la página es obligatorio');
@@ -49,13 +50,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         throw new Exception('Ya existe una página con ese título');
                     }
 
+                    // Iniciar transacción
+                    $db->beginTransaction();
+
+                    // Crear página
                     $stmt = $db->prepare("
                         INSERT INTO pages (title, slug, content, meta_title, meta_description, is_active) 
                         VALUES (?, ?, ?, ?, ?, ?)
                     ");
                     $stmt->execute([$title, $slug, $content, $meta_title, $meta_description, $is_active]);
+                    $pageId = $db->lastInsertId();
 
-                    $success = 'Página creada exitosamente';
+                    // Agregar automáticamente a elementos disponibles si está marcado
+                    if ($available_in_menus) {
+                        // Obtener próximo orden
+                        $stmt = $db->prepare("SELECT COALESCE(MAX(sort_order), 0) + 1 as next_order FROM menu_items WHERE menu_location = 'available_pages'");
+                        $stmt->execute();
+                        $nextOrder = $stmt->fetch()['next_order'];
+                        
+                        // Crear elemento en disponibles
+                        $stmt = $db->prepare("
+                            INSERT INTO menu_items (title, url, menu_location, is_active, sort_order, created_at) 
+                            VALUES (?, ?, 'available_pages', ?, ?, NOW())
+                        ");
+                        $stmt->execute([$title, '/' . $slug, $is_active, $nextOrder]);
+                    }
+
+                    $db->commit();
+                    $success = 'Página creada exitosamente' . ($available_in_menus ? ' y agregada a elementos disponibles' : '');
                     redirect($_SERVER['PHP_SELF'] . '?created=1');
                     break;
 
@@ -66,9 +88,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $meta_title = sanitize($_POST['meta_title'] ?? '');
                     $meta_description = sanitize($_POST['meta_description'] ?? '');
                     $is_active = isset($_POST['is_active']) ? 1 : 0;
+                    $available_in_menus = isset($_POST['available_in_menus']) ? 1 : 0;
 
                     if (empty($title) || $id <= 0) {
                         throw new Exception('Datos inválidos');
+                    }
+
+                    // Obtener slug actual
+                    $stmt = $db->prepare("SELECT slug FROM pages WHERE id = ?");
+                    $stmt->execute([$id]);
+                    $currentPage = $stmt->fetch();
+                    if (!$currentPage) {
+                        throw new Exception('Página no encontrada');
                     }
 
                     $slug = generateSlug($title);
@@ -80,12 +111,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         throw new Exception('Ya existe una página con ese título');
                     }
 
+                    // Iniciar transacción
+                    $db->beginTransaction();
+
+                    // Actualizar página
                     $stmt = $db->prepare("
                         UPDATE pages SET title = ?, slug = ?, content = ?, meta_title = ?, meta_description = ?, is_active = ?, updated_at = NOW() 
                         WHERE id = ?
                     ");
                     $stmt->execute([$title, $slug, $content, $meta_title, $meta_description, $is_active, $id]);
 
+                    // Gestionar elementos disponibles
+                    $currentUrl = '/' . $currentPage['slug'];
+                    $newUrl = '/' . $slug;
+
+                    // Verificar si ya existe en elementos disponibles
+                    $stmt = $db->prepare("SELECT id FROM menu_items WHERE url = ? AND menu_location = 'available_pages'");
+                    $stmt->execute([$currentUrl]);
+                    $existingMenu = $stmt->fetch();
+
+                    if ($available_in_menus) {
+                        if ($existingMenu) {
+                            // Actualizar elemento existente
+                            $stmt = $db->prepare("
+                                UPDATE menu_items 
+                                SET title = ?, url = ?, is_active = ?, updated_at = NOW() 
+                                WHERE id = ?
+                            ");
+                            $stmt->execute([$title, $newUrl, $is_active, $existingMenu['id']]);
+                        } else {
+                            // Crear nuevo elemento disponible
+                            $stmt = $db->prepare("SELECT COALESCE(MAX(sort_order), 0) + 1 as next_order FROM menu_items WHERE menu_location = 'available_pages'");
+                            $stmt->execute();
+                            $nextOrder = $stmt->fetch()['next_order'];
+                            
+                            $stmt = $db->prepare("
+                                INSERT INTO menu_items (title, url, menu_location, is_active, sort_order, created_at) 
+                                VALUES (?, ?, 'available_pages', ?, ?, NOW())
+                            ");
+                            $stmt->execute([$title, $newUrl, $is_active, $nextOrder]);
+                        }
+                        
+                        // También actualizar en todas las otras ubicaciones donde pueda estar
+                        $stmt = $db->prepare("
+                            UPDATE menu_items 
+                            SET title = ?, url = ?, is_active = ?, updated_at = NOW() 
+                            WHERE url = ? AND menu_location != 'available_pages'
+                        ");
+                        $stmt->execute([$title, $newUrl, $is_active, $currentUrl]);
+                        
+                    } else {
+                        // Eliminar de elementos disponibles si existe
+                        if ($existingMenu) {
+                            $stmt = $db->prepare("DELETE FROM menu_items WHERE id = ?");
+                            $stmt->execute([$existingMenu['id']]);
+                        }
+                    }
+
+                    $db->commit();
                     $success = 'Página actualizada exitosamente';
                     redirect($_SERVER['PHP_SELF'] . '?updated=1');
                     break;
@@ -96,15 +179,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         throw new Exception('ID inválido');
                     }
 
+                    // Obtener datos de la página
+                    $stmt = $db->prepare("SELECT slug FROM pages WHERE id = ?");
+                    $stmt->execute([$id]);
+                    $pageToDelete = $stmt->fetch();
+                    
+                    if (!$pageToDelete) {
+                        throw new Exception('Página no encontrada');
+                    }
+
+                    // Iniciar transacción
+                    $db->beginTransaction();
+
+                    // Eliminar página
                     $stmt = $db->prepare("DELETE FROM pages WHERE id = ?");
                     $stmt->execute([$id]);
 
+                    // Eliminar automáticamente de todos los menús
+                    $stmt = $db->prepare("DELETE FROM menu_items WHERE url = ?");
+                    $stmt->execute(['/' . $pageToDelete['slug']]);
+
+                    $db->commit();
                     $success = 'Página eliminada exitosamente';
                     redirect($_SERVER['PHP_SELF'] . '?deleted=1');
                     break;
             }
         }
     } catch (Exception $e) {
+        if (isset($db) && $db->inTransaction()) {
+            $db->rollBack();
+        }
         $error = $e->getMessage();
         logError("Error en páginas: " . $e->getMessage());
     }
@@ -113,7 +217,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Obtener páginas
 try {
     $db = Database::getInstance()->getConnection();
-    $stmt = $db->query("SELECT * FROM pages ORDER BY title ASC");
+    $stmt = $db->query("
+        SELECT p.*, 
+               CASE WHEN m.id IS NOT NULL THEN 1 ELSE 0 END as available_in_menus
+        FROM pages p 
+        LEFT JOIN menu_items m ON m.url = CONCAT('/', p.slug) AND m.menu_location = 'available_pages'
+        ORDER BY p.title ASC
+    ");
     $pages = $stmt->fetchAll();
 } catch (Exception $e) {
     $pages = [];
@@ -123,15 +233,24 @@ try {
 // Si hay un ID en GET, obtener datos para editar
 $editPage = null;
 $createMode = isset($_GET['create']);
+$hasAvailableInMenus = false;
 
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     try {
-        $stmt = $db->prepare("SELECT * FROM pages WHERE id = ?");
+        $stmt = $db->prepare("
+            SELECT p.*, 
+                   CASE WHEN m.id IS NOT NULL THEN 1 ELSE 0 END as available_in_menus
+            FROM pages p 
+            LEFT JOIN menu_items m ON m.url = CONCAT('/', p.slug) AND m.menu_location = 'available_pages'
+            WHERE p.id = ?
+        ");
         $stmt->execute([$_GET['edit']]);
         $editPage = $stmt->fetch();
         if (!$editPage) {
             $error = 'Página no encontrada';
             redirect($_SERVER['PHP_SELF']);
+        } else {
+            $hasAvailableInMenus = $editPage['available_in_menus'];
         }
     } catch (Exception $e) {
         $error = 'Error al obtener página para editar';
@@ -165,6 +284,35 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
         .note-editor {
             border: 1px solid #ced4da;
             border-radius: 0.25rem;
+        }
+        
+        .menu-auto-info {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .menu-auto-info h6 {
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+        
+        .sync-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .sync-available {
+            background-color: #4caf50;
+        }
+        
+        .sync-not-available {
+            background-color: #f44336;
         }
     </style>
 </head>
@@ -220,6 +368,16 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                         <!-- Vista de Lista -->
                         <div class="row">
                             <div class="col-12">
+                                <!-- Info sobre sistema automático -->
+                                <div class="menu-auto-info">
+                                    <h6><i class="fas fa-magic"></i> Sistema Automático de Menús</h6>
+                                    <p class="mb-0">
+                                        <i class="fas fa-info-circle"></i>
+                                        Las páginas marcadas como "Disponible en menús" aparecerán automáticamente en la sección "Elementos Disponibles" del editor de menús, 
+                                        donde podrás organizarlas fácilmente arrastrando a donde desees (header, footer, etc.).
+                                    </p>
+                                </div>
+                                
                                 <div class="card">
                                     <div class="card-header">
                                         <h3 class="card-title">Páginas del Sitio</h3>
@@ -238,6 +396,7 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                                                         <th>Slug</th>
                                                         <th>Contenido</th>
                                                         <th width="100">Estado</th>
+                                                        <th width="120">En Menús</th>
                                                         <th width="150">Fecha</th>
                                                         <th width="120">Acciones</th>
                                                     </tr>
@@ -264,9 +423,24 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                                                             </td>
                                                             <td>
                                                                 <?php if ($page['is_active']): ?>
-                                                                    <span class="badge badge-success">Activa</span>
+                                                                    <span class="badge badge-success">
+                                                                        <span class="sync-indicator sync-available"></span>Activa
+                                                                    </span>
                                                                 <?php else: ?>
-                                                                    <span class="badge badge-secondary">Inactiva</span>
+                                                                    <span class="badge badge-secondary">
+                                                                        <span class="sync-indicator sync-not-available"></span>Inactiva
+                                                                    </span>
+                                                                <?php endif; ?>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <?php if ($page['available_in_menus']): ?>
+                                                                    <span class="badge badge-success">
+                                                                        <i class="fas fa-check"></i> Disponible
+                                                                    </span>
+                                                                <?php else: ?>
+                                                                    <span class="badge badge-light">
+                                                                        <i class="fas fa-times"></i> No
+                                                                    </span>
                                                                 <?php endif; ?>
                                                             </td>
                                                             <td>
@@ -342,6 +516,20 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                                                                 </div>
                                                             </div>
 
+                                                            <!-- Opción: Disponible en menús -->
+                                                            <div class="form-group">
+                                                                <div class="custom-control custom-switch">
+                                                                    <input type="checkbox" class="custom-control-input" id="available_in_menus" name="available_in_menus"
+                                                                        <?php echo (!$editPage) || ($editPage && $hasAvailableInMenus) ? 'checked' : ''; ?>>
+                                                                    <label class="custom-control-label" for="available_in_menus">
+                                                                        <i class="fas fa-sitemap"></i> Disponible en Menús
+                                                                    </label>
+                                                                </div>
+                                                                <small class="text-muted">
+                                                                    Si está marcado, la página aparecerá en "Elementos Disponibles" del editor de menús para que puedas organizarla donde desees.
+                                                                </small>
+                                                            </div>
+
                                                             <div class="form-group">
                                                                 <label>URL de la Página</label>
                                                                 <div class="input-group">
@@ -397,18 +585,6 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                         </div>
                     <?php endif; ?>
 
-                    <?php if (isset($_GET['create'])): ?>
-                        <?php $editPage = true; // Para mostrar el formulario 
-                        ?>
-                        <script>
-                            // Mostrar formulario de creación
-                            document.addEventListener('DOMContentLoaded', function() {
-                                document.querySelector('.card-title').textContent = 'Nueva Página';
-                                document.querySelector('input[name="action"]').value = 'create';
-                            });
-                        </script>
-                    <?php endif; ?>
-
                 </div>
             </section>
         </div>
@@ -427,7 +603,7 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                 </div>
                 <div class="modal-body">
                     <p>¿Estás seguro de que deseas eliminar la página <strong id="pageNameToDelete"></strong>?</p>
-                    <p class="text-danger">Esta acción no se puede deshacer.</p>
+                    <p class="text-danger">Esta acción no se puede deshacer y también eliminará la página de todos los menús.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
@@ -460,6 +636,7 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
             <?php if (!$createMode && $editPage): ?>
                 $('#slugPreview').val('<?php echo $editPage['slug']; ?>');
             <?php endif; ?>
+            
             // Inicializar DataTable
             $('#pagesTable').DataTable({
                 "responsive": true,
@@ -491,11 +668,6 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                 const slug = generateSlug(title);
                 $('#slugPreview').val(slug);
             });
-
-            // Generar slug inicial si estamos editando
-            <?php if (!$createMode && $editPage): ?>
-                $('#slugPreview').val('<?php echo $editPage['slug']; ?>');
-            <?php endif; ?>
 
             // Contador de caracteres para SEO
             $('#meta_title').on('input', function() {

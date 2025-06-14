@@ -15,7 +15,7 @@ $error = '';
 
 // Manejar mensajes de éxito de redirecciones
 if (isset($_GET['created'])) {
-    $success = 'Categoría creada exitosamente';
+    $success = 'Categoría creada exitosamente y agregada a elementos disponibles';
 } elseif (isset($_GET['updated'])) {
     $success = 'Categoría actualizada exitosamente';
 } elseif (isset($_GET['deleted'])) {
@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $name = sanitize($_POST['name'] ?? '');
                     $description = sanitize($_POST['description'] ?? '');
                     $is_active = isset($_POST['is_active']) ? 1 : 0;
+                    $available_in_menus = isset($_POST['available_in_menus']) ? 1 : 0;
                     
                     if (empty($name)) {
                         throw new Exception('El nombre de la categoría es obligatorio');
@@ -55,18 +56,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $uploadResult = uploadFile($_FILES['image'], UPLOADS_PATH . '/categories', ALLOWED_IMAGE_TYPES);
                         if ($uploadResult['success']) {
                             $imagePath = $uploadResult['filename'];
-                        } else {
+                                                                // También actualizar en todas las otras ubicaciones donde pueda estar
+                                        $stmt = $db->prepare("
+                                            UPDATE menu_items 
+                                            SET title = ?, url = ?, is_active = ?, updated_at = NOW() 
+                                            WHERE url = ? AND menu_location != 'available_categories'
+                                        ");
+                                        $stmt->execute([$name, $newUrl, $is_active, $currentUrl]);
+                                        
+                                    } else {
                             throw new Exception('Error al subir imagen: ' . $uploadResult['message']);
                         }
                     }
                     
+                    // Iniciar transacción
+                    $db->beginTransaction();
+                    
+                    // Crear categoría
                     $stmt = $db->prepare("
                         INSERT INTO categories (name, slug, description, image, is_active, sort_order) 
                         VALUES (?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM categories c))
                     ");
                     $stmt->execute([$name, $slug, $description, $imagePath, $is_active]);
+                    $categoryId = $db->lastInsertId();
                     
-                    $success = 'Categoría creada exitosamente';
+                    // Agregar automáticamente a elementos disponibles si está marcado
+                    if ($available_in_menus) {
+                        // Obtener próximo orden
+                        $stmt = $db->prepare("SELECT COALESCE(MAX(sort_order), 0) + 1 as next_order FROM menu_items WHERE menu_location = 'available_categories'");
+                        $stmt->execute();
+                        $nextOrder = $stmt->fetch()['next_order'];
+                        
+                        // Crear elemento en disponibles
+                        $stmt = $db->prepare("
+                            INSERT INTO menu_items (title, url, menu_location, is_active, sort_order, created_at) 
+                            VALUES (?, ?, 'available_categories', ?, ?, NOW())
+                        ");
+                        $stmt->execute([$name, '/categoria/' . $slug, $is_active, $nextOrder]);
+                    }
+                    
+                    $db->commit();
+                    $success = 'Categoría creada exitosamente' . ($available_in_menus ? ' y agregada a elementos disponibles' : '');
                     redirect($_SERVER['PHP_SELF'] . '?created=1');
                     break;
                     
@@ -75,9 +105,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $name = sanitize($_POST['name'] ?? '');
                     $description = sanitize($_POST['description'] ?? '');
                     $is_active = isset($_POST['is_active']) ? 1 : 0;
+                    $available_in_menus = isset($_POST['available_in_menus']) ? 1 : 0;
                     
                     if (empty($name) || $id <= 0) {
                         throw new Exception('Datos inválidos');
+                    }
+                    
+                    // Obtener slug actual
+                    $stmt = $db->prepare("SELECT slug FROM categories WHERE id = ?");
+                    $stmt->execute([$id]);
+                    $currentCategory = $stmt->fetch();
+                    if (!$currentCategory) {
+                        throw new Exception('Categoría no encontrada');
                     }
                     
                     $slug = generateSlug($name);
@@ -110,9 +149,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                     
+                    // Iniciar transacción
+                    $db->beginTransaction();
+                    
+                    // Actualizar categoría
                     $stmt = $db->prepare("UPDATE categories SET name = ?, slug = ?, description = ?, image = ?, is_active = ? WHERE id = ?");
                     $stmt->execute([$name, $slug, $description, $imagePath, $is_active, $id]);
                     
+                    // Gestionar elementos disponibles
+                    $currentUrl = '/categoria/' . $currentCategory['slug'];
+                    $newUrl = '/categoria/' . $slug;
+                    
+                    // Verificar si ya existe en elementos disponibles
+                    $stmt = $db->prepare("SELECT id FROM menu_items WHERE url = ? AND menu_location = 'available_categories'");
+                    $stmt->execute([$currentUrl]);
+                    $existingMenu = $stmt->fetch();
+                    
+                    if ($available_in_menus) {
+                        if ($existingMenu) {
+                            // Actualizar elemento existente
+                            $stmt = $db->prepare("
+                                UPDATE menu_items 
+                                SET title = ?, url = ?, is_active = ?, updated_at = NOW() 
+                                WHERE id = ?
+                            ");
+                            $stmt->execute([$name, $newUrl, $is_active, $existingMenu['id']]);
+                        } else {
+                            // Crear nuevo elemento disponible
+                            $stmt = $db->prepare("SELECT COALESCE(MAX(sort_order), 0) + 1 as next_order FROM menu_items WHERE menu_location = 'available_categories'");
+                            $stmt->execute();
+                            $nextOrder = $stmt->fetch()['next_order'];
+                            
+                            $stmt = $db->prepare("
+                                INSERT INTO menu_items (title, url, menu_location, is_active, sort_order, created_at) 
+                                VALUES (?, ?, 'available_categories', ?, ?, NOW())
+                            ");
+                            $stmt->execute([$name, $newUrl, $is_active, $nextOrder]);
+                        }
+                        
+                        // También actualizar en todas las otras ubicaciones donde pueda estar
+                        $stmt = $db->prepare("
+                            UPDATE menu_items 
+                            SET title = ?, url = ?, is_active = ?, updated_at = NOW() 
+                            WHERE url = ? AND menu_location != 'available_categories'
+                        ");
+                        $stmt->execute([$name, $newUrl, $is_active, $currentUrl]);
+                        
+                    } else {
+                        // Eliminar de elementos disponibles si existe
+                        if ($existingMenu) {
+                            $stmt = $db->prepare("DELETE FROM menu_items WHERE id = ?");
+                            $stmt->execute([$existingMenu['id']]);
+                        }
+                    }
+                    
+                    $db->commit();
                     $success = 'Categoría actualizada exitosamente';
                     redirect($_SERVER['PHP_SELF'] . '?updated=1');
                     break;
@@ -132,20 +223,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         throw new Exception('No se puede eliminar una categoría que tiene productos asociados');
                     }
                     
-                    // Obtener imagen para eliminar
-                    $stmt = $db->prepare("SELECT image FROM categories WHERE id = ?");
+                    // Obtener datos de la categoría
+                    $stmt = $db->prepare("SELECT slug, image FROM categories WHERE id = ?");
                     $stmt->execute([$id]);
-                    $image = $stmt->fetchColumn();
+                    $categoryToDelete = $stmt->fetch();
+                    
+                    if (!$categoryToDelete) {
+                        throw new Exception('Categoría no encontrada');
+                    }
+                    
+                    // Iniciar transacción
+                    $db->beginTransaction();
                     
                     // Eliminar categoría
                     $stmt = $db->prepare("DELETE FROM categories WHERE id = ?");
                     $stmt->execute([$id]);
                     
+                    // Eliminar automáticamente de todos los menús
+                    $stmt = $db->prepare("DELETE FROM menu_items WHERE url = ?");
+                    $stmt->execute(['/categoria/' . $categoryToDelete['slug']]);
+                    
                     // Eliminar imagen si existe
-                    if ($image && file_exists(UPLOADS_PATH . '/categories/' . $image)) {
-                        unlink(UPLOADS_PATH . '/categories/' . $image);
+                    if ($categoryToDelete['image'] && file_exists(UPLOADS_PATH . '/categories/' . $categoryToDelete['image'])) {
+                        unlink(UPLOADS_PATH . '/categories/' . $categoryToDelete['image']);
                     }
                     
+                    $db->commit();
                     $success = 'Categoría eliminada exitosamente';
                     redirect($_SERVER['PHP_SELF'] . '?deleted=1');
                     break;
@@ -162,6 +265,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     } catch (Exception $e) {
+        if (isset($db) && $db->inTransaction()) {
+            $db->rollBack();
+        }
         $error = $e->getMessage();
         logError("Error en categorías: " . $e->getMessage());
     }
@@ -172,14 +278,36 @@ try {
     $db = Database::getInstance()->getConnection();
     $stmt = $db->query("
         SELECT c.*, 
-               (SELECT COUNT(*) FROM products p WHERE p.category_id = c.id AND p.is_active = 1) as product_count
+               (SELECT COUNT(*) FROM products p WHERE p.category_id = c.id AND p.is_active = 1) as product_count,
+               CASE WHEN m.id IS NOT NULL THEN 1 ELSE 0 END as available_in_menus,
+               CASE WHEN c.is_active = 1 AND m.id IS NOT NULL THEN 1 ELSE 0 END as in_menus
         FROM categories c 
+        LEFT JOIN menu_items m ON m.url = CONCAT('/categoria/', c.slug) AND m.menu_location = 'available_categories'
         ORDER BY c.sort_order ASC, c.name ASC
     ");
     $categories = $stmt->fetchAll();
 } catch (Exception $e) {
     $categories = [];
     $error = 'Error al obtener categorías: ' . $e->getMessage();
+}
+
+// Si hay un ID en GET, obtener datos para editar
+$editCategory = null;
+if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
+    try {
+        $stmt = $db->prepare("
+            SELECT c.*, 
+                   CASE WHEN m.id IS NOT NULL THEN 1 ELSE 0 END as available_in_menus,
+                   CASE WHEN c.is_active = 1 AND m.id IS NOT NULL THEN 1 ELSE 0 END as in_menus
+            FROM categories c 
+            LEFT JOIN menu_items m ON m.url = CONCAT('/categoria/', c.slug) AND m.menu_location = 'available_categories'
+            WHERE c.id = ?
+        ");
+        $stmt->execute([$_GET['edit']]);
+        $editCategory = $stmt->fetch();
+    } catch (Exception $e) {
+        $error = 'Error al obtener categoría para editar';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -206,6 +334,30 @@ try {
         }
         .sortable-row:hover {
             background-color: #f8f9fa;
+        }
+        .menu-auto-info {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .menu-auto-info h6 {
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+        .sync-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .sync-available {
+            background-color: #4caf50;
+        }
+        .sync-not-available {
+            background-color: #f44336;
         }
     </style>
 </head>
@@ -259,6 +411,16 @@ try {
                 <div class="row">
                     <!-- Lista de Categorías -->
                     <div class="col-md-8">
+                        <!-- Info sobre sistema automático -->
+                        <div class="menu-auto-info">
+                            <h6><i class="fas fa-magic"></i> Sistema Automático de Menús</h6>
+                            <p class="mb-0">
+                                <i class="fas fa-info-circle"></i>
+                                Las categorías marcadas como "Disponible en menús" aparecerán automáticamente en la sección "Elementos Disponibles" del editor de menús, 
+                                donde podrás organizarlas fácilmente arrastrando a donde desees (header, footer, etc.).
+                            </p>
+                        </div>
+                        
                         <div class="card">
                             <div class="card-header">
                                 <h3 class="card-title">Categorías Existentes</h3>
@@ -278,6 +440,7 @@ try {
                                                 <th>Slug</th>
                                                 <th width="100">Productos</th>
                                                 <th width="80">Estado</th>
+                                                                                                        <th width="120">En Menús</th>
                                                 <th width="100">Orden</th>
                                                 <th width="120">Acciones</th>
                                             </tr>
@@ -308,9 +471,33 @@ try {
                                                     </td>
                                                     <td>
                                                         <?php if ($category['is_active']): ?>
-                                                            <span class="badge badge-success">Activa</span>
+                                                            <span class="badge badge-success">
+                                                                <span class="sync-indicator sync-available"></span>Activa
+                                                            </span>
                                                         <?php else: ?>
-                                                            <span class="badge badge-secondary">Inactiva</span>
+                                                            <span class="badge badge-secondary">
+                                                                <span class="sync-indicator sync-not-available"></span>Inactiva
+                                                            </span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <?php if ($category['in_menus']): ?>
+                                                            <span class="badge badge-success">
+                                                                <i class="fas fa-check"></i> Sí
+                                                            </span>
+                                                        <?php elseif ($category['available_in_menus']): ?>
+                                                            <span class="badge badge-warning">
+                                                                <i class="fas fa-exclamation-triangle"></i> Inactivo
+                                                            </span>
+                                                        <?php else: ?>
+                                                            <span class="badge badge-light">
+                                                                <i class="fas fa-times"></i> No
+                                                            </span>
+                                                        <?php endif; ?>
+                                                        
+                                                        <!-- Tooltip explicativo -->
+                                                        <?php if ($category['available_in_menus'] && !$category['in_menus']): ?>
+                                                            <br><small class="text-muted">Disponible pero inactivo</small>
                                                         <?php endif; ?>
                                                     </td>
                                                     <td>
@@ -321,9 +508,9 @@ try {
                                                         <span class="order-display"><?php echo $category['sort_order']; ?></span>
                                                     </td>
                                                     <td>
-                                                        <button class="btn btn-sm btn-info" onclick="editCategory(<?php echo htmlspecialchars(json_encode($category)); ?>)">
+                                                        <a href="?edit=<?php echo $category['id']; ?>" class="btn btn-sm btn-info">
                                                             <i class="fas fa-edit"></i>
-                                                        </button>
+                                                        </a>
                                                         <button class="btn btn-sm btn-danger" onclick="deleteCategory(<?php echo $category['id']; ?>, '<?php echo htmlspecialchars($category['name']); ?>')">
                                                             <i class="fas fa-trash"></i>
                                                         </button>
@@ -341,46 +528,76 @@ try {
                     <div class="col-md-4">
                         <div class="card">
                             <div class="card-header">
-                                <h3 class="card-title" id="formTitle">Nueva Categoría</h3>
+                                <h3 class="card-title" id="formTitle">
+                                    <?php echo $editCategory ? 'Editar Categoría' : 'Nueva Categoría'; ?>
+                                </h3>
+                                <?php if ($editCategory): ?>
+                                    <div class="card-tools">
+                                        <a href="?" class="btn btn-sm btn-secondary">
+                                            <i class="fas fa-times"></i> Cancelar
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                             <form method="post" enctype="multipart/form-data" id="categoryForm">
                                 <div class="card-body">
-                                    <input type="hidden" name="action" id="formAction" value="create">
-                                    <input type="hidden" name="id" id="categoryId">
+                                    <input type="hidden" name="action" id="formAction" value="<?php echo $editCategory ? 'update' : 'create'; ?>">
+                                    <?php if ($editCategory): ?>
+                                        <input type="hidden" name="id" value="<?php echo $editCategory['id']; ?>">
+                                    <?php endif; ?>
 
                                     <div class="form-group">
                                         <label for="name">Nombre *</label>
-                                        <input type="text" class="form-control" id="name" name="name" required>
+                                        <input type="text" class="form-control" id="name" name="name" 
+                                               value="<?php echo $editCategory ? htmlspecialchars($editCategory['name']) : ''; ?>" required>
                                     </div>
 
                                     <div class="form-group">
                                         <label for="description">Descripción</label>
-                                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                                        <textarea class="form-control" id="description" name="description" rows="3"><?php echo $editCategory ? htmlspecialchars($editCategory['description']) : ''; ?></textarea>
                                     </div>
 
                                     <div class="form-group">
                                         <label for="image">Imagen</label>
                                         <input type="file" class="form-control-file" id="image" name="image" accept="image/*">
                                         <small class="text-muted">Formatos: JPG, PNG, GIF. Máximo 2MB.</small>
-                                        <div id="imagePreview" style="margin-top: 10px; display: none;">
-                                            <img id="previewImg" src="" alt="Preview" style="max-width: 100%; height: 100px; object-fit: cover; border-radius: 5px;">
+                                        <div id="imagePreview" style="margin-top: 10px; <?php echo ($editCategory && $editCategory['image']) ? '' : 'display: none;'; ?>">
+                                            <img id="previewImg" src="<?php echo ($editCategory && $editCategory['image']) ? UPLOADS_URL . '/categories/' . $editCategory['image'] : ''; ?>" 
+                                                 alt="Preview" style="max-width: 100%; height: 100px; object-fit: cover; border-radius: 5px;">
                                         </div>
                                     </div>
 
                                     <div class="form-group">
                                         <div class="custom-control custom-switch">
-                                            <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" checked>
+                                            <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" 
+                                                   <?php echo (!$editCategory || $editCategory['is_active']) ? 'checked' : ''; ?>>
                                             <label class="custom-control-label" for="is_active">Categoría Activa</label>
                                         </div>
+                                    </div>
+
+                                    <!-- NUEVA OPCIÓN: Disponible en menús -->
+                                    <div class="form-group">
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="available_in_menus" name="available_in_menus" 
+                                                   <?php echo (!$editCategory) || ($editCategory && $editCategory['available_in_menus']) ? 'checked' : ''; ?>>
+                                            <label class="custom-control-label" for="available_in_menus">
+                                                <i class="fas fa-sitemap"></i> Disponible en Menús
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">
+                                            Si está marcado, la categoría aparecerá en "Elementos Disponibles" del editor de menús para que puedas organizarla donde desees.
+                                        </small>
                                     </div>
                                 </div>
                                 <div class="card-footer">
                                     <button type="submit" class="btn btn-primary" id="submitBtn">
-                                        <i class="fas fa-save"></i> Crear Categoría
+                                        <i class="fas fa-save"></i> <?php echo $editCategory ? 'Actualizar Categoría' : 'Crear Categoría'; ?>
                                     </button>
-                                    <button type="button" class="btn btn-secondary" onclick="resetForm()" id="cancelBtn" style="display: none;">
-                                        <i class="fas fa-times"></i> Cancelar
-                                    </button>
+                                    <?php if ($editCategory): ?>
+                                        <a href="?" class="btn btn-secondary">
+                                            <i class="fas fa-times"></i> Cancelar
+                                        </a>
+                                    <?php endif; ?>
                                 </div>
                             </form>
                         </div>
@@ -405,7 +622,7 @@ try {
             </div>
             <div class="modal-body">
                 <p>¿Estás seguro de que deseas eliminar la categoría <strong id="categoryNameToDelete"></strong>?</p>
-                <p class="text-danger">Esta acción no se puede deshacer.</p>
+                <p class="text-danger">Esta acción no se puede deshacer y también eliminará la categoría de todos los menús.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
@@ -459,33 +676,6 @@ $(document).ready(function() {
         }
     });
 });
-
-function editCategory(category) {
-    $('#formTitle').text('Editar Categoría');
-    $('#formAction').val('update');
-    $('#categoryId').val(category.id);
-    $('#name').val(category.name);
-    $('#description').val(category.description);
-    $('#is_active').prop('checked', category.is_active == 1);
-    $('#submitBtn').html('<i class="fas fa-save"></i> Actualizar Categoría');
-    $('#cancelBtn').show();
-    
-    if (category.image) {
-        $('#previewImg').attr('src', '<?php echo UPLOADS_URL; ?>/categories/' + category.image);
-        $('#imagePreview').show();
-    }
-}
-
-function resetForm() {
-    $('#formTitle').text('Nueva Categoría');
-    $('#formAction').val('create');
-    $('#categoryId').val('');
-    $('#categoryForm')[0].reset();
-    $('#is_active').prop('checked', true);
-    $('#submitBtn').html('<i class="fas fa-save"></i> Crear Categoría');
-    $('#cancelBtn').hide();
-    $('#imagePreview').hide();
-}
 
 function deleteCategory(id, name) {
     $('#categoryNameToDelete').text(name);

@@ -134,17 +134,17 @@
                                 <i class="fas fa-file nav-icon"></i>
                                 <p>Páginas</p>
                             </a>
+                        </li>                        
+                        <li class="nav-item">
+                            <a href="<?php echo ADMIN_URL; ?>/pages/content/menus.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'menus.php' ? 'active' : ''; ?>">
+                                <i class="fas fa-bars nav-icon"></i>
+                                <p>Menús</p>
+                            </a>
                         </li>
                         <li class="nav-item">
                             <a href="<?php echo ADMIN_URL; ?>/pages/content/banners.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'banners.php' ? 'active' : ''; ?>">
                                 <i class="fas fa-images nav-icon"></i>
                                 <p>Banners</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="<?php echo ADMIN_URL; ?>/pages/content/menus.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'menus.php' ? 'active' : ''; ?>">
-                                <i class="fas fa-bars nav-icon"></i>
-                                <p>Menús</p>
                             </a>
                         </li>
                     </ul>

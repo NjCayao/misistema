@@ -1,5 +1,5 @@
 <?php
-// pages/checkout.php - Página de checkout
+// pages/checkout.php - Página de checkout mejorada
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../config/functions.php';
@@ -124,7 +124,6 @@ $pageTitle = 'Checkout - Finalizar Compra';
         .payment-logo {
             height: 30px;
             width: auto;
-            margin-left: auto;
         }
         
         .order-summary {
@@ -181,6 +180,35 @@ $pageTitle = 'Checkout - Finalizar Compra';
             align-items: center;
             justify-content: center;
             z-index: 9999;
+        }
+        
+        /* Stripe Elements */
+        .StripeElement {
+            background-color: white;
+            padding: 12px 16px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            box-shadow: inset 0 1px 1px rgba(0,0,0,.075);
+            transition: box-shadow 150ms ease;
+        }
+        
+        .StripeElement--focus {
+            box-shadow: 0 0 0 3px rgba(59, 153, 252, .15);
+            border-color: #80bdff;
+        }
+        
+        .StripeElement--invalid {
+            border-color: #dc3545;
+        }
+        
+        /* PayPal */
+        #paypal-button-container {
+            min-height: 50px;
+        }
+        
+        /* MercadoPago */
+        #mercadopago-button {
+            min-height: 50px;
         }
         
         @media (max-width: 768px) {
@@ -339,7 +367,7 @@ $pageTitle = 'Checkout - Finalizar Compra';
                                                             <h6 class="mb-1">Tarjeta de Crédito/Débito</h6>
                                                             <small class="text-muted">Visa, Mastercard, American Express</small>
                                                         </div>
-                                                        <div class="payment-logo">
+                                                        <div class="payment-logo ms-auto">
                                                             <i class="fab fa-cc-stripe fa-2x text-primary"></i>
                                                         </div>
                                                     </div>
@@ -347,10 +375,16 @@ $pageTitle = 'Checkout - Finalizar Compra';
                                             </div>
                                             
                                             <div class="payment-form" id="stripe-form">
-                                                <div id="card-element">
+                                                <div id="stripe-card-element">
                                                     <!-- Stripe Elements se insertará aquí -->
                                                 </div>
-                                                <div id="card-errors" role="alert" class="text-danger mt-2"></div>
+                                                <div id="stripe-card-errors" role="alert" class="text-danger mt-2"></div>
+                                                <div class="mt-2">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-lock me-1"></i>
+                                                        Tus datos están protegidos con encriptación SSL
+                                                    </small>
+                                                </div>
                                             </div>
                                         </div>
                                     <?php endif; ?>
@@ -367,7 +401,7 @@ $pageTitle = 'Checkout - Finalizar Compra';
                                                             <h6 class="mb-1">PayPal</h6>
                                                             <small class="text-muted">Paga con tu cuenta PayPal</small>
                                                         </div>
-                                                        <div class="payment-logo">
+                                                        <div class="payment-logo ms-auto">
                                                             <i class="fab fa-paypal fa-2x text-primary"></i>
                                                         </div>
                                                     </div>
@@ -375,7 +409,15 @@ $pageTitle = 'Checkout - Finalizar Compra';
                                             </div>
                                             
                                             <div class="payment-form" id="paypal-form">
-                                                <div id="paypal-button-container"></div>
+                                                <div id="paypal-button-container">
+                                                    <!-- PayPal Buttons se insertarán aquí -->
+                                                </div>
+                                                <div class="mt-2">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-shield-alt me-1"></i>
+                                                        Protegido por PayPal Buyer Protection
+                                                    </small>
+                                                </div>
                                             </div>
                                         </div>
                                     <?php endif; ?>
@@ -392,7 +434,7 @@ $pageTitle = 'Checkout - Finalizar Compra';
                                                             <h6 class="mb-1">MercadoPago + Yape</h6>
                                                             <small class="text-muted">Tarjetas locales y billeteras digitales</small>
                                                         </div>
-                                                        <div class="payment-logo">
+                                                        <div class="payment-logo ms-auto">
                                                             <i class="fas fa-credit-card fa-2x text-success"></i>
                                                         </div>
                                                     </div>
@@ -400,7 +442,15 @@ $pageTitle = 'Checkout - Finalizar Compra';
                                             </div>
                                             
                                             <div class="payment-form" id="mercadopago-form">
-                                                <div id="mercadopago-button"></div>
+                                                <div id="mercadopago-button">
+                                                    <!-- MercadoPago Button se insertará aquí -->
+                                                </div>
+                                                <div class="mt-2">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-mobile-alt me-1"></i>
+                                                        Incluye Yape, billeteras y tarjetas locales
+                                                    </small>
+                                                </div>
                                             </div>
                                         </div>
                                     <?php endif; ?>
@@ -579,9 +629,61 @@ $pageTitle = 'Checkout - Finalizar Compra';
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="<?php echo ASSETS_URL; ?>/js/main.js"></script>
     
-    <!-- Scripts de pasarelas de pago (se cargarán en la Fase 4.2) -->
+    <!-- Scripts de pasarelas de pago -->
     <?php if ($stripeEnabled): ?>
         <script src="https://js.stripe.com/v3/"></script>
+        <script>
+            // Configuración de Stripe
+            const stripePublishableKey = '<?php echo Settings::get('stripe_publishable_key', ''); ?>';
+            let stripe = null;
+            let elements = null;
+            let cardElement = null;
+            
+            if (stripePublishableKey) {
+                stripe = Stripe(stripePublishableKey);
+                elements = stripe.elements();
+                
+                // Crear elemento de tarjeta
+                cardElement = elements.create('card', {
+                    style: {
+                        base: {
+                            fontSize: '16px',
+                            color: '#424770',
+                            '::placeholder': {
+                                color: '#aab7c4',
+                            },
+                        },
+                        invalid: {
+                            color: '#9e2146',
+                        },
+                    },
+                });
+            }
+        </script>
+    <?php endif; ?>
+    
+    <?php if ($paypalEnabled): ?>
+        <script src="https://www.paypal.com/sdk/js?client-id=<?php echo Settings::get('paypal_client_id', ''); ?>&currency=USD"></script>
+        <script>
+            // Configuración de PayPal
+            const paypalClientId = '<?php echo Settings::get('paypal_client_id', ''); ?>';
+            let paypalButtons = null;
+        </script>
+    <?php endif; ?>
+    
+    <?php if ($mercadopagoEnabled): ?>
+        <script src="https://sdk.mercadopago.com/js/v2"></script>
+        <script>
+            // Configuración de MercadoPago
+            const mercadopagoPublicKey = '<?php echo Settings::get('mercadopago_public_key', ''); ?>';
+            let mp = null;
+            
+            if (mercadopagoPublicKey) {
+                mp = new MercadoPago(mercadopagoPublicKey, {
+                    locale: 'es-PE'
+                });
+            }
+        </script>
     <?php endif; ?>
     
     <script>
@@ -607,6 +709,9 @@ $pageTitle = 'Checkout - Finalizar Compra';
                     const targetForm = document.getElementById(methodType + '-form');
                     if (targetForm) {
                         targetForm.classList.add('active');
+                        
+                        // Inicializar elementos específicos
+                        initializePaymentMethod(methodType);
                     }
                 });
             });
@@ -619,7 +724,6 @@ $pageTitle = 'Checkout - Finalizar Compra';
             
             // Manejar envío del formulario
             const checkoutForm = document.getElementById('checkoutForm');
-            const submitButton = document.getElementById('submit-button');
             
             checkoutForm.addEventListener('submit', function(e) {
                 e.preventDefault();
@@ -630,20 +734,210 @@ $pageTitle = 'Checkout - Finalizar Compra';
                     return;
                 }
                 
-                // Mostrar overlay de procesamiento
-                showProcessingOverlay();
-                
                 // Procesar según el método de pago
                 const selectedPaymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
                 
                 if (selectedPaymentMethod === 'free') {
                     processFreeOrder();
                 } else {
-                    // Las pasarelas se implementarán en la Fase 4.2
                     processPayment(selectedPaymentMethod);
                 }
             });
         });
+        
+        function initializePaymentMethod(method) {
+            switch(method) {
+                case 'stripe':
+                    initializeStripe();
+                    break;
+                case 'paypal':
+                    initializePayPal();
+                    break;
+                case 'mercadopago':
+                    initializeMercadoPago();
+                    break;
+            }
+        }
+        
+        function initializeStripe() {
+            if (stripe && cardElement && !cardElement._mounted) {
+                cardElement.mount('#stripe-card-element');
+                cardElement._mounted = true;
+                
+                cardElement.addEventListener('change', function(event) {
+                    const displayError = document.getElementById('stripe-card-errors');
+                    if (event.error) {
+                        displayError.textContent = event.error.message;
+                    } else {
+                        displayError.textContent = '';
+                    }
+                });
+            }
+        }
+        
+        function initializePayPal() {
+            if (typeof paypal !== 'undefined' && paypalClientId && !paypalButtons) {
+                const container = document.getElementById('paypal-button-container');
+                container.innerHTML = ''; // Limpiar contenedor
+                
+                paypalButtons = paypal.Buttons({
+                    createOrder: function(data, actions) {
+                        return createPayPalOrder();
+                    },
+                    onApprove: function(data, actions) {
+                        return handlePayPalApproval(data);
+                    },
+                    onError: function(err) {
+                        console.error('PayPal Error:', err);
+                        alert('Error con PayPal: ' + err);
+                        hideProcessingOverlay();
+                    }
+                });
+                
+                paypalButtons.render('#paypal-button-container');
+            }
+        }
+        
+        function initializeMercadoPago() {
+            if (mp && mercadopagoPublicKey) {
+                const container = document.getElementById('mercadopago-button');
+                container.innerHTML = '<p class="text-muted">Haz clic en "Procesar Pago" para continuar con MercadoPago</p>';
+            }
+        }
+        
+        function processPayment(paymentMethod) {
+            showProcessingOverlay();
+            
+            const formData = new FormData(document.getElementById('checkoutForm'));
+            
+            fetch('/api/payments/process_payment.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    handlePaymentResponse(data, paymentMethod);
+                } else {
+                    hideProcessingOverlay();
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                hideProcessingOverlay();
+                console.error('Error:', error);
+                alert('Error al procesar el pedido');
+            });
+        }
+        
+        function handlePaymentResponse(data, paymentMethod) {
+            switch(paymentMethod) {
+                case 'stripe':
+                    handleStripeResponse(data);
+                    break;
+                case 'paypal':
+                    handlePayPalResponse(data);
+                    break;
+                case 'mercadopago':
+                    handleMercadoPagoResponse(data);
+                    break;
+                default:
+                    hideProcessingOverlay();
+                    alert('Método de pago no soportado');
+            }
+        }
+        
+        function handleStripeResponse(data) {
+            if (stripe && data.client_secret) {
+                stripe.confirmCardPayment(data.client_secret, {
+                    payment_method: {
+                        card: cardElement,
+                        billing_details: {
+                            name: document.getElementById('first_name').value + ' ' + document.getElementById('last_name').value,
+                            email: document.getElementById('email').value
+                        }
+                    }
+                }).then(function(result) {
+                    hideProcessingOverlay();
+                    
+                    if (result.error) {
+                        alert('Error en el pago: ' + result.error.message);
+                    } else {
+                        window.location.href = '/pages/success.php?order=' + data.order_number;
+                    }
+                });
+            } else {
+                hideProcessingOverlay();
+                alert('Error de configuración de Stripe');
+            }
+        }
+        
+        function handlePayPalResponse(data) {
+            if (data.approval_url) {
+                window.location.href = data.approval_url;
+            } else {
+                hideProcessingOverlay();
+                alert('Error obteniendo URL de PayPal');
+            }
+        }
+        
+        function handleMercadoPagoResponse(data) {
+            if (data.init_point) {
+                window.location.href = data.init_point;
+            } else {
+                hideProcessingOverlay();
+                alert('Error obteniendo URL de MercadoPago');
+            }
+        }
+        
+        function createPayPalOrder() {
+            // Esta función se llama desde PayPal Buttons
+            const formData = new FormData(document.getElementById('checkoutForm'));
+            
+            return fetch('/api/payments/process_payment.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.paypal_order_id) {
+                    return data.paypal_order_id;
+                } else {
+                    throw new Error(data.message || 'Error creando orden PayPal');
+                }
+            });
+        }
+        
+        function handlePayPalApproval(data) {
+            showProcessingOverlay();
+            window.location.href = '/api/payments/paypal_return.php?token=' + data.orderID + '&PayerID=' + data.payerID;
+        }
+        
+        function processFreeOrder() {
+            showProcessingOverlay();
+            
+            const formData = new FormData(document.getElementById('checkoutForm'));
+            
+            fetch('/api/payments/process_payment.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideProcessingOverlay();
+                
+                if (data.success) {
+                    window.location.href = data.redirect_url || '/pages/success.php?order=' + data.order_number;
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                hideProcessingOverlay();
+                console.error('Error:', error);
+                alert('Error al procesar el pedido gratuito');
+            });
+        }
         
         function showProcessingOverlay() {
             document.getElementById('processing-overlay').style.display = 'flex';
@@ -651,39 +945,6 @@ $pageTitle = 'Checkout - Finalizar Compra';
         
         function hideProcessingOverlay() {
             document.getElementById('processing-overlay').style.display = 'none';
-        }
-        
-        function processFreeOrder() {
-            // Simular procesamiento para productos gratuitos
-            setTimeout(() => {
-                const formData = new FormData(document.getElementById('checkoutForm'));
-                
-                fetch('/api/payments/process_payment.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    hideProcessingOverlay();
-                    
-                    if (data.success) {
-                        window.location.href = '/pages/success.php?order=' + data.order_number;
-                    } else {
-                        alert('Error: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    hideProcessingOverlay();
-                    console.error('Error:', error);
-                    alert('Error al procesar el pedido');
-                });
-            }, 2000);
-        }
-        
-        function processPayment(paymentMethod) {
-            // Por ahora mostrar mensaje - se implementará en Fase 4.2
-            hideProcessingOverlay();
-            alert('Integración de ' + paymentMethod + ' se completará en la siguiente fase del desarrollo');
         }
         
         // Validación en tiempo real
