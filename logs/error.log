@@ -29,3 +29,4 @@
 [2025-06-13 23:39:55] Error en configuración de pagos: Para habilitar PayPal necesitas Client ID y Secret
 [2025-06-14 02:47:55] Error en menús: No se puede eliminar un elemento que tiene subelementos. Elimina primero los subelementos.
 [2025-06-14 02:48:00] Error en menús: No se puede eliminar un elemento que tiene subelementos. Elimina primero los subelementos.
+[2025-06-14 18:59:06] Error en categorías: No se puede eliminar una categoría que tiene productos
