@@ -4,28 +4,31 @@
 /**
  * Clase para manejar el envío de emails usando las configuraciones del admin
  */
-class EmailSystem {
-    
+class EmailSystem
+{
+
     /**
      * Enviar email usando configuraciones SMTP del admin
      */
-    public static function sendEmail($to, $subject, $body, $isHTML = true) {
+    public static function sendEmail($to, $subject, $body, $isHTML = true)
+    {
         // Obtener configuraciones SMTP
         $smtpEnabled = Settings::get('smtp_enabled', '0');
-        
+
         if ($smtpEnabled != '1') {
             // Si SMTP no está habilitado, usar mail() de PHP
             return self::sendWithPHPMail($to, $subject, $body, $isHTML);
         }
-        
+
         // Usar PHPMailer con configuraciones SMTP
         return self::sendWithSMTP($to, $subject, $body, $isHTML);
     }
-    
+
     /**
      * Enviar email usando plantilla predefinida
      */
-    public static function sendTemplateEmail($to, $templateType, $variables = []) {
+    public static function sendTemplateEmail($to, $templateType, $variables = [])
+    {
         $templates = [
             'welcome' => [
                 'subject' => Settings::get('welcome_email_subject', 'Bienvenido a {SITE_NAME}'),
@@ -44,25 +47,25 @@ class EmailSystem {
                 'body' => Settings::get('donation_email_template', 'Hola {USER_NAME},\n\n¡Muchas gracias por tu donación de {DONATION_AMOUNT}!\n\nTu apoyo nos ayuda a seguir creando software de calidad.\n\nCon gratitud,\nEl equipo de {SITE_NAME}')
             ]
         ];
-        
+
         if (!isset($templates[$templateType])) {
             logError("Plantilla de email no encontrada: $templateType");
             return false;
         }
-        
+
         $template = $templates[$templateType];
-        
+
         // Reemplazar variables en subject y body
         $subject = self::replaceVariables($template['subject'], $variables);
         $body = self::replaceVariables($template['body'], $variables);
-        
+
         // Agregar footer si está configurado
         $footer = Settings::get('email_footer', '');
         if (!empty($footer)) {
             $footer = self::replaceVariables($footer, $variables);
             $body .= "\n\n" . $footer;
         }
-        
+
         // Convertir a HTML si el body contiene saltos de línea
         $isHTML = strpos($body, '<') !== false;
         if (!$isHTML) {
@@ -70,14 +73,15 @@ class EmailSystem {
             $body = "<html><body>$body</body></html>";
             $isHTML = true;
         }
-        
+
         return self::sendEmail($to, $subject, $body, $isHTML);
     }
-    
+
     /**
      * Reemplazar variables en plantillas
      */
-    private static function replaceVariables($text, $variables) {
+    private static function replaceVariables($text, $variables)
+    {
         // Variables del sitio (siempre disponibles)
         $siteVariables = [
             '{SITE_NAME}' => Settings::get('site_name', 'MiSistema'),
@@ -87,101 +91,105 @@ class EmailSystem {
             '{CURRENT_DATE}' => date('d/m/Y'),
             '{UNSUBSCRIBE_LINK}' => SITE_URL . '/unsubscribe' // Implementar más adelante
         ];
-        
+
         // Combinar variables del sitio con variables personalizadas
         $allVariables = array_merge($siteVariables, $variables);
-        
+
         // Reemplazar variables
         return str_replace(array_keys($allVariables), array_values($allVariables), $text);
     }
-    
+
     /**
      * Enviar con SMTP usando PHPMailer
      */
-    private static function sendWithSMTP($to, $subject, $body, $isHTML) {
+    private static function sendWithSMTP($to, $subject, $body, $isHTML)
+    {
         try {
             // Por ahora, vamos a implementar una versión simplificada
             // Más adelante integraremos PHPMailer
-            
+
             $smtpHost = Settings::get('smtp_host');
             $smtpPort = Settings::get('smtp_port', '587');
             $smtpUsername = Settings::get('smtp_username');
             $smtpPassword = Settings::get('smtp_password');
             $fromEmail = Settings::get('from_email', $smtpUsername);
             $fromName = Settings::get('from_name', Settings::get('site_name', 'MiSistema'));
-            
+
             // Headers para email HTML
             $headers = [];
             $headers[] = "From: $fromName <$fromEmail>";
             $headers[] = "Reply-To: " . Settings::get('reply_to_email', $fromEmail);
             $headers[] = "MIME-Version: 1.0";
-            
+
             if ($isHTML) {
                 $headers[] = "Content-Type: text/html; charset=UTF-8";
             } else {
                 $headers[] = "Content-Type: text/plain; charset=UTF-8";
             }
-            
+
             $headers[] = "X-Mailer: MiSistema";
-            
+
             // Por ahora usar mail() de PHP
             // TODO: Implementar PHPMailer real
             $success = mail($to, $subject, $body, implode("\r\n", $headers));
-            
+
             if ($success) {
                 logError("Email enviado exitosamente a: $to - Asunto: $subject", 'email.log');
             } else {
                 logError("Error enviando email a: $to - Asunto: $subject", 'email_errors.log');
             }
-            
+
             return $success;
-            
         } catch (Exception $e) {
             logError("Error SMTP: " . $e->getMessage(), 'email_errors.log');
             return false;
         }
     }
-    
+
     /**
      * Enviar con mail() de PHP
      */
-    private static function sendWithPHPMail($to, $subject, $body, $isHTML) {
+    private static function sendWithPHPMail($to, $subject, $body, $isHTML)
+    {
         $fromEmail = Settings::get('from_email', Settings::get('site_email', FROM_EMAIL));
         $fromName = Settings::get('from_name', Settings::get('site_name', FROM_NAME));
-        
+
         $headers = [];
         $headers[] = "From: $fromName <$fromEmail>";
         $headers[] = "MIME-Version: 1.0";
-        
+
         if ($isHTML) {
             $headers[] = "Content-Type: text/html; charset=UTF-8";
         } else {
             $headers[] = "Content-Type: text/plain; charset=UTF-8";
         }
-        
+
         return mail($to, $subject, $body, implode("\r\n", $headers));
     }
-    
+
     /**
      * Funciones específicas para cada tipo de email
      */
-    
-    public static function sendWelcomeEmail($userEmail, $userName) {
+
+    public static function sendWelcomeEmail($userEmail, $userName)
+    {
         return self::sendTemplateEmail($userEmail, 'welcome', [
             '{USER_NAME}' => $userName,
             '{USER_EMAIL}' => $userEmail
         ]);
     }
-    
-    public static function sendVerificationEmail($userEmail, $userName, $verificationCode) {
+
+    public static function sendVerificationEmail($userEmail, $userName, $verificationCode)
+    {
         return self::sendTemplateEmail($userEmail, 'verification', [
             '{USER_NAME}' => $userName,
             '{USER_EMAIL}' => $userEmail,
             '{VERIFICATION_CODE}' => $verificationCode
         ]);
     }
-    
-    public static function sendPurchaseEmail($userEmail, $userName, $orderNumber, $orderTotal, $downloadLinks) {
+
+    public static function sendPurchaseEmail($userEmail, $userName, $orderNumber, $orderTotal, $downloadLinks)
+    {
         return self::sendTemplateEmail($userEmail, 'purchase', [
             '{USER_NAME}' => $userName,
             '{USER_EMAIL}' => $userEmail,
@@ -190,20 +198,22 @@ class EmailSystem {
             '{DOWNLOAD_LINKS}' => $downloadLinks
         ]);
     }
-    
-    public static function sendDonationEmail($userEmail, $userName, $donationAmount) {
+
+    public static function sendDonationEmail($userEmail, $userName, $donationAmount)
+    {
         return self::sendTemplateEmail($userEmail, 'donation', [
             '{USER_NAME}' => $userName,
             '{USER_EMAIL}' => $userEmail,
             '{DONATION_AMOUNT}' => formatPrice($donationAmount)
         ]);
     }
-    
-    public static function sendPasswordResetEmail($userEmail, $userName, $resetToken) {
+
+    public static function sendPasswordResetEmail($userEmail, $userName, $resetToken)
+    {
         $siteName = Settings::get('site_name', 'MiSistema');
         $subject = "Recuperar contraseña - $siteName";
         $resetUrl = SITE_URL . "/pages/reset-password.php?token=" . $resetToken;
-        
+
         $body = "
         <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
             <div style='background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;'>
@@ -256,36 +266,38 @@ class EmailSystem {
             </div>
         </div>
         ";
-        
+
         return self::sendEmail($userEmail, $subject, $body, true);
     }
-    
+
     /**
      * Enviar notificaciones al admin
      */
-    public static function notifyAdmin($subject, $body, $type = 'general') {
+    public static function notifyAdmin($subject, $body, $type = 'general')
+    {
         $notificationsEnabled = Settings::get('email_notifications_enabled', '1');
         if ($notificationsEnabled != '1') {
             return true; // No enviar si están deshabilitadas
         }
-        
+
         $adminEmail = Settings::get('admin_notification_email');
         if (empty($adminEmail)) {
             return false; // No hay email de admin configurado
         }
-        
+
         // Agregar prefijo al asunto
         $siteName = Settings::get('site_name', 'MiSistema');
         $prefixedSubject = "[$siteName] $subject";
-        
+
         return self::sendEmail($adminEmail, $prefixedSubject, $body, true);
     }
-    
-    public static function notifyNewOrder($orderData) {
+
+    public static function notifyNewOrder($orderData)
+    {
         if (Settings::get('notify_new_orders', '1') != '1') {
             return true;
         }
-        
+
         $subject = "Nueva orden recibida - #{$orderData['order_number']}";
         $body = "
         <h2>Nueva Orden Recibida</h2>
@@ -295,15 +307,16 @@ class EmailSystem {
         <p><strong>Método de pago:</strong> {$orderData['payment_method']}</p>
         <p><strong>Fecha:</strong> " . date('d/m/Y H:i:s') . "</p>
         ";
-        
+
         return self::notifyAdmin($subject, $body, 'order');
     }
-    
-    public static function notifyNewUser($userData) {
+
+    public static function notifyNewUser($userData)
+    {
         if (Settings::get('notify_new_users', '1') != '1') {
             return true;
         }
-        
+
         $subject = "Nuevo usuario registrado";
         $body = "
         <h2>Nuevo Usuario Registrado</h2>
@@ -312,21 +325,23 @@ class EmailSystem {
         <p><strong>País:</strong> {$userData['country']}</p>
         <p><strong>Fecha:</strong> " . date('d/m/Y H:i:s') . "</p>
         ";
-        
+
         return self::notifyAdmin($subject, $body, 'user');
     }
 }
 
 // Funciones helper para mantener compatibilidad
-function sendEmail($to, $subject, $body, $isHTML = true) {
+function sendEmail($to, $subject, $body, $isHTML = true)
+{
     return EmailSystem::sendEmail($to, $subject, $body, $isHTML);
 }
 
-function sendWelcomeEmail($userEmail, $userName) {
+function sendWelcomeEmail($userEmail, $userName)
+{
     return EmailSystem::sendWelcomeEmail($userEmail, $userName);
 }
 
-function sendVerificationEmail($userEmail, $userName, $verificationCode) {
+function sendVerificationEmail($userEmail, $userName, $verificationCode)
+{
     return EmailSystem::sendVerificationEmail($userEmail, $userName, $verificationCode);
 }
-?>

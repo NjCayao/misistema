@@ -140,7 +140,20 @@ function logoutUser() {
 
 // Función para redireccionar
 function redirect($url) {
-    header("Location: $url");
+    // Si la URL ya es completa (http/https), usarla tal como está
+    if (strpos($url, 'http://') === 0 || strpos($url, 'https://') === 0) {
+        header("Location: $url");
+        exit();
+    }
+    
+    // Si empieza con /, agregar SITE_URL
+    if (strpos($url, '/') === 0) {
+        header("Location: " . SITE_URL . $url);
+        exit();
+    }
+    
+    // Si no empieza con /, agregar SITE_URL/
+    header("Location: " . SITE_URL . '/' . $url);
     exit();
 }
 

@@ -415,29 +415,12 @@ $siteName = Settings::get('site_name', 'MiSistema');
                                     <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
                                 </button>
                             </form>
-                            
-                            <!-- Social Login -->
-                            <div class="social-login">
-                                <p class="text-center text-muted mb-3">O inicia sesión con:</p>
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <button class="btn btn-google btn-social" type="button" onclick="loginWithGoogle()">
-                                            <i class="fab fa-google me-2"></i>Google
-                                        </button>
-                                    </div>
-                                    <div class="col-6">
-                                        <button class="btn btn-facebook btn-social" type="button" onclick="loginWithFacebook()">
-                                            <i class="fab fa-facebook-f me-2"></i>Facebook
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                         
                         <!-- Footer -->
                         <div class="auth-footer">
                             <p class="mb-0">
-                                ¿No tienes cuenta? <a href="/pages/register.php" class="text-decoration-none">Crear Cuenta</a>
+                                ¿No tienes cuenta? <a href="<?php echo SITE_URL; ?>/pages/register.php" class="text-decoration-none">Crear Cuenta</a>
                             </p>
                             <div class="mt-2">
                                 <a href="<?php echo SITE_URL; ?>" class="text-muted text-decoration-none">

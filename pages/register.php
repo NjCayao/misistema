@@ -30,41 +30,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $confirmPassword = $_POST['confirm_password'] ?? '';
     $acceptTerms = isset($_POST['accept_terms']);
     $newsletter = isset($_POST['newsletter']);
-    
+
     // Validaciones
     if (empty($firstName)) {
         $errors[] = 'El nombre es obligatorio';
     }
-    
+
     if (empty($lastName)) {
         $errors[] = 'El apellido es obligatorio';
     }
-    
+
     if (empty($email) || !isValidEmail($email)) {
         $errors[] = 'Ingresa un email válido';
     }
-    
+
     if (empty($password)) {
         $errors[] = 'La contraseña es obligatoria';
     } elseif (strlen($password) < PASSWORD_MIN_LENGTH) {
         $errors[] = 'La contraseña debe tener al menos ' . PASSWORD_MIN_LENGTH . ' caracteres';
     }
-    
+
     if ($password !== $confirmPassword) {
         $errors[] = 'Las contraseñas no coinciden';
     }
-    
+
     if (!$acceptTerms) {
         $errors[] = 'Debes aceptar los términos y condiciones';
     }
-    
+
     // Verificar si el email ya existe
     if (empty($errors)) {
         try {
             $db = Database::getInstance()->getConnection();
             $stmt = $db->prepare("SELECT id FROM users WHERE email = ?");
             $stmt->execute([$email]);
-            
+
             if ($stmt->fetch()) {
                 $errors[] = 'Este email ya está registrado';
             }
@@ -73,19 +73,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'Error del sistema. Inténtalo más tarde';
         }
     }
-    
+
     // Crear usuario si no hay errores
     if (empty($errors)) {
         try {
             $db = Database::getInstance()->getConnection();
-            
+
             // Generar código de verificación
             $verificationCode = generateVerificationCode();
             $verificationExpires = date('Y-m-d H:i:s', strtotime('+' . VERIFICATION_CODE_EXPIRY . ' minutes'));
-            
+
             // Hash de la contraseña
             $hashedPassword = hashPassword($password);
-            
+
             $stmt = $db->prepare("
                 INSERT INTO users (
                     first_name, last_name, email, phone, country, 
@@ -93,16 +93,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     is_verified, is_active, created_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1, NOW())
             ");
-            
+
             if ($stmt->execute([
-                $firstName, $lastName, $email, $phone, $country,
-                $hashedPassword, $verificationCode, $verificationExpires
+                $firstName,
+                $lastName,
+                $email,
+                $phone,
+                $country,
+                $hashedPassword,
+                $verificationCode,
+                $verificationExpires
             ])) {
                 $userId = $db->lastInsertId();
-                
+
                 // Enviar email de verificación usando el nuevo sistema
                 $emailSent = sendVerificationEmail($email, $firstName, $verificationCode);
-                
+
                 // Notificar al admin sobre nuevo usuario (si está habilitado)
                 EmailSystem::notifyNewUser([
                     'first_name' => $firstName,
@@ -110,22 +116,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'email' => $email,
                     'country' => $country
                 ]);
-                
+
                 if ($emailSent) {
-                    setFlashMessage('success', 'Registro exitoso. Revisa tu email para verificar tu cuenta.');
-                    redirect('/pages/verify-email.php?email=' . urlencode($email));
+                    setFlashMessage('success', 'Registro exitoso. Revisa tu email para verificar tu cuenta. <br> no olvides revisar la carpeta de spam.');
+                    redirect('/pages/verify-email?email=' . urlencode($email));
                 } else {
-                    // Si no se puede enviar email, marcar como verificado para que pueda acceder
-                    $stmt = $db->prepare("UPDATE users SET is_verified = 1 WHERE id = ?");
-                    $stmt->execute([$userId]);
-                    
-                    setFlashMessage('warning', 'Registro exitoso. No pudimos enviar el email de verificación, pero tu cuenta está activa.');
-                    redirect('/pages/login.php');
+                    setFlashMessage('warning', 'Registro exitoso. Hubo un problema enviando el email, pero puedes intentar verificar tu cuenta. <br> Si no recibes el email, contacta al soporte.');
+                    redirect('/pages/verify-email?email=' . urlencode($email));
                 }
             } else {
                 $errors[] = 'Error al crear la cuenta. Inténtalo más tarde';
             }
-            
         } catch (Exception $e) {
             logError("Error en registro: " . $e->getMessage());
             $errors[] = 'Error del sistema. Inténtalo más tarde';
@@ -137,19 +138,20 @@ $siteName = Settings::get('site_name', 'MiSistema');
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crear Cuenta - <?php echo htmlspecialchars($siteName); ?></title>
-    
+
     <meta name="description" content="Crea tu cuenta gratis y accede a nuestros productos">
     <meta name="robots" content="noindex, follow">
-    
+
     <!-- CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="<?php echo ASSETS_URL; ?>/css/style.css" rel="stylesheet">
-    
+
     <style>
         .auth-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -158,7 +160,7 @@ $siteName = Settings::get('site_name', 'MiSistema');
             align-items: center;
             position: relative;
         }
-        
+
         .auth-section::before {
             content: '';
             position: absolute;
@@ -169,35 +171,35 @@ $siteName = Settings::get('site_name', 'MiSistema');
             background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>') repeat;
             animation: float 20s infinite linear;
         }
-        
+
         .auth-card {
             background: white;
             border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
             overflow: hidden;
             position: relative;
             z-index: 2;
         }
-        
+
         .auth-header {
             background: linear-gradient(45deg, #667eea, #764ba2);
             color: white;
             padding: 2rem;
             text-align: center;
         }
-        
+
         .auth-body {
             padding: 2rem;
         }
-        
+
         .form-floating label {
             color: #6c757d;
         }
-        
-        .form-floating > .form-control:focus ~ label {
+
+        .form-floating>.form-control:focus~label {
             color: #007bff;
         }
-        
+
         .password-strength {
             height: 4px;
             background: #e9ecef;
@@ -205,24 +207,39 @@ $siteName = Settings::get('site_name', 'MiSistema');
             margin-top: 0.5rem;
             overflow: hidden;
         }
-        
+
         .password-strength-bar {
             height: 100%;
             width: 0%;
             transition: all 0.3s ease;
         }
-        
-        .strength-weak { background: #dc3545; width: 25%; }
-        .strength-fair { background: #ffc107; width: 50%; }
-        .strength-good { background: #28a745; width: 75%; }
-        .strength-strong { background: #007bff; width: 100%; }
-        
+
+        .strength-weak {
+            background: #dc3545;
+            width: 25%;
+        }
+
+        .strength-fair {
+            background: #ffc107;
+            width: 50%;
+        }
+
+        .strength-good {
+            background: #28a745;
+            width: 75%;
+        }
+
+        .strength-strong {
+            background: #007bff;
+            width: 100%;
+        }
+
         .social-login {
             border-top: 1px solid #dee2e6;
             padding-top: 2rem;
             margin-top: 2rem;
         }
-        
+
         .btn-social {
             width: 100%;
             margin-bottom: 0.5rem;
@@ -230,32 +247,38 @@ $siteName = Settings::get('site_name', 'MiSistema');
             border-radius: 8px;
             font-weight: 500;
         }
-        
+
         .btn-google {
             background: #dd4b39;
             border-color: #dd4b39;
             color: white;
         }
-        
+
         .btn-facebook {
             background: #3b5998;
             border-color: #3b5998;
             color: white;
         }
-        
+
         .auth-footer {
             background: #f8f9fa;
             padding: 1.5rem 2rem;
             text-align: center;
             border-top: 1px solid #dee2e6;
         }
-        
+
         @keyframes float {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-100px); }
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(-100px);
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="auth-section">
         <div class="container">
@@ -269,7 +292,7 @@ $siteName = Settings::get('site_name', 'MiSistema');
                             </h2>
                             <p class="mb-0 opacity-75">Únete a nuestra comunidad de desarrolladores</p>
                         </div>
-                        
+
                         <!-- Body -->
                         <div class="auth-body">
                             <!-- Mostrar errores -->
@@ -283,58 +306,58 @@ $siteName = Settings::get('site_name', 'MiSistema');
                                     </ul>
                                 </div>
                             <?php endif; ?>
-                            
+
                             <!-- Formulario de Registro -->
                             <form method="POST" id="registerForm" novalidate>
                                 <div class="row g-3">
                                     <!-- Nombre -->
                                     <div class="col-md-6">
                                         <div class="form-floating">
-                                            <input type="text" class="form-control" id="first_name" name="first_name" 
-                                                   value="<?php echo htmlspecialchars($_POST['first_name'] ?? ''); ?>" 
-                                                   placeholder="Nombre" required>
+                                            <input type="text" class="form-control" id="first_name" name="first_name"
+                                                value="<?php echo htmlspecialchars($_POST['first_name'] ?? ''); ?>"
+                                                placeholder="Nombre" required>
                                             <label for="first_name">
                                                 <i class="fas fa-user me-2"></i>Nombre
                                             </label>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Apellido -->
                                     <div class="col-md-6">
                                         <div class="form-floating">
-                                            <input type="text" class="form-control" id="last_name" name="last_name" 
-                                                   value="<?php echo htmlspecialchars($_POST['last_name'] ?? ''); ?>" 
-                                                   placeholder="Apellido" required>
+                                            <input type="text" class="form-control" id="last_name" name="last_name"
+                                                value="<?php echo htmlspecialchars($_POST['last_name'] ?? ''); ?>"
+                                                placeholder="Apellido" required>
                                             <label for="last_name">
                                                 <i class="fas fa-user me-2"></i>Apellido
                                             </label>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Email -->
                                     <div class="col-12">
                                         <div class="form-floating">
-                                            <input type="email" class="form-control" id="email" name="email" 
-                                                   value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>" 
-                                                   placeholder="Email" required>
+                                            <input type="email" class="form-control" id="email" name="email"
+                                                value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
+                                                placeholder="Email" required>
                                             <label for="email">
                                                 <i class="fas fa-envelope me-2"></i>Email
                                             </label>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Teléfono -->
                                     <div class="col-md-6">
                                         <div class="form-floating">
-                                            <input type="tel" class="form-control" id="phone" name="phone" 
-                                                   value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>" 
-                                                   placeholder="Teléfono">
+                                            <input type="tel" class="form-control" id="phone" name="phone"
+                                                value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>"
+                                                placeholder="Teléfono">
                                             <label for="phone">
                                                 <i class="fas fa-phone me-2"></i>Teléfono (opcional)
                                             </label>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- País -->
                                     <div class="col-md-6">
                                         <div class="form-floating">
@@ -355,12 +378,12 @@ $siteName = Settings::get('site_name', 'MiSistema');
                                             </label>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Contraseña -->
                                     <div class="col-md-6">
                                         <div class="form-floating">
-                                            <input type="password" class="form-control" id="password" name="password" 
-                                                   placeholder="Contraseña" required>
+                                            <input type="password" class="form-control" id="password" name="password"
+                                                placeholder="Contraseña" required>
                                             <label for="password">
                                                 <i class="fas fa-lock me-2"></i>Contraseña
                                             </label>
@@ -372,18 +395,18 @@ $siteName = Settings::get('site_name', 'MiSistema');
                                             Mínimo <?php echo PASSWORD_MIN_LENGTH; ?> caracteres
                                         </small>
                                     </div>
-                                    
+
                                     <!-- Confirmar Contraseña -->
                                     <div class="col-md-6">
                                         <div class="form-floating">
-                                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
-                                                   placeholder="Confirmar contraseña" required>
+                                            <input type="password" class="form-control" id="confirm_password" name="confirm_password"
+                                                placeholder="Confirmar contraseña" required>
                                             <label for="confirm_password">
                                                 <i class="fas fa-lock me-2"></i>Confirmar
                                             </label>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Términos y Newsletter -->
                                     <div class="col-12">
                                         <div class="form-check mb-3">
@@ -393,7 +416,7 @@ $siteName = Settings::get('site_name', 'MiSistema');
                                                 y la <a href="/pages/page.php?slug=politica-privacidad" target="_blank">política de privacidad</a>
                                             </label>
                                         </div>
-                                        
+
                                         <div class="form-check mb-4">
                                             <input class="form-check-input" type="checkbox" id="newsletter" name="newsletter">
                                             <label class="form-check-label" for="newsletter">
@@ -401,7 +424,7 @@ $siteName = Settings::get('site_name', 'MiSistema');
                                             </label>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Botón de Registro -->
                                     <div class="col-12">
                                         <button type="submit" class="btn btn-primary btn-lg w-100">
@@ -410,29 +433,12 @@ $siteName = Settings::get('site_name', 'MiSistema');
                                     </div>
                                 </div>
                             </form>
-                            
-                            <!-- Social Login -->
-                            <div class="social-login">
-                                <p class="text-center text-muted mb-3">O regístrate con:</p>
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <button class="btn btn-google btn-social" type="button">
-                                            <i class="fab fa-google me-2"></i>Google
-                                        </button>
-                                    </div>
-                                    <div class="col-6">
-                                        <button class="btn btn-facebook btn-social" type="button">
-                                            <i class="fab fa-facebook-f me-2"></i>Facebook
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
-                        
+
                         <!-- Footer -->
                         <div class="auth-footer">
                             <p class="mb-0">
-                                ¿Ya tienes cuenta? <a href="/pages/login.php" class="text-decoration-none">Iniciar Sesión</a>
+                                ¿Ya tienes cuenta? <a href="<?php echo SITE_URL; ?>/pages/login.php" class="text-decoration-none">Iniciar Sesión</a>
                             </p>
                         </div>
                     </div>
@@ -440,10 +446,10 @@ $siteName = Settings::get('site_name', 'MiSistema');
             </div>
         </div>
     </div>
-    
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const passwordInput = document.getElementById('password');
@@ -451,28 +457,28 @@ $siteName = Settings::get('site_name', 'MiSistema');
             const strengthBar = document.getElementById('strengthBar');
             const passwordHelp = document.getElementById('passwordHelp');
             const form = document.getElementById('registerForm');
-            
+
             // Validador de fuerza de contraseña
             passwordInput.addEventListener('input', function() {
                 const password = this.value;
                 const strength = calculatePasswordStrength(password);
-                
+
                 // Actualizar barra de fuerza
                 strengthBar.className = 'password-strength-bar';
                 if (strength.score > 0) {
                     strengthBar.classList.add(`strength-${strength.level}`);
                 }
-                
+
                 // Actualizar texto de ayuda
                 passwordHelp.textContent = strength.message;
                 passwordHelp.className = `form-text text-${strength.color}`;
             });
-            
+
             // Validar confirmación de contraseña
             confirmPasswordInput.addEventListener('input', function() {
                 const password = passwordInput.value;
                 const confirm = this.value;
-                
+
                 if (confirm && password !== confirm) {
                     this.setCustomValidity('Las contraseñas no coinciden');
                     this.classList.add('is-invalid');
@@ -482,14 +488,14 @@ $siteName = Settings::get('site_name', 'MiSistema');
                     if (confirm) this.classList.add('is-valid');
                 }
             });
-            
+
             // Validación en tiempo real
             const inputs = form.querySelectorAll('input[required], select[required]');
             inputs.forEach(input => {
                 input.addEventListener('blur', validateInput);
                 input.addEventListener('input', validateInput);
             });
-            
+
             function validateInput() {
                 if (this.validity.valid) {
                     this.classList.remove('is-invalid');
@@ -499,32 +505,32 @@ $siteName = Settings::get('site_name', 'MiSistema');
                     this.classList.add('is-invalid');
                 }
             }
-            
+
             // Envío del formulario
             form.addEventListener('submit', function(e) {
                 const isValid = form.checkValidity();
-                
+
                 if (!isValid) {
                     e.preventDefault();
                     e.stopPropagation();
                 }
-                
+
                 form.classList.add('was-validated');
             });
         });
-        
+
         function calculatePasswordStrength(password) {
             let score = 0;
             let level = 'weak';
             let message = 'Muy débil';
             let color = 'danger';
-            
+
             if (password.length >= <?php echo PASSWORD_MIN_LENGTH; ?>) score++;
             if (password.match(/[a-z]/)) score++;
             if (password.match(/[A-Z]/)) score++;
             if (password.match(/[0-9]/)) score++;
             if (password.match(/[^a-zA-Z0-9]/)) score++;
-            
+
             switch (score) {
                 case 0:
                 case 1:
@@ -549,9 +555,15 @@ $siteName = Settings::get('site_name', 'MiSistema');
                     color = 'primary';
                     break;
             }
-            
-            return { score, level, message, color };
+
+            return {
+                score,
+                level,
+                message,
+                color
+            };
         }
     </script>
 </body>
+
 </html>
