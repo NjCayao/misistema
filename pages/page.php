@@ -368,12 +368,12 @@ $pageDescription = $page['meta_description'] ?: substr(strip_tags($page['content
                 <div class="mt-5">
                     <div class="row">
                         <div class="col-md-6">
-                            <a href="/productos" class="btn btn-outline-primary">
+                            <a href="<?php echo SITE_URL; ?>/productos" class="btn btn-outline-primary">
                                 <i class="fas fa-box me-2"></i>Ver Productos
                             </a>
                         </div>
                         <div class="col-md-6 text-md-end">
-                            <a href="/contacto" class="btn btn-outline-success">
+                            <a href="<?php echo SITE_URL; ?>/contacto" class="btn btn-outline-success">
                                 <i class="fas fa-envelope me-2"></i>Contactanos
                             </a>
                         </div>

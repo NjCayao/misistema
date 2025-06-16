@@ -484,7 +484,7 @@ try {
                     <?php endforeach; ?>
                 </div>
                 <div class="text-center mt-5">
-                    <a href="/productos" class="btn btn-primary btn-lg">
+                    <a href="<?php echo SITE_URL; ?>/productos" class="btn btn-primary btn-lg">
                         Ver Todos los Productos <i class="fas fa-arrow-right ms-2"></i>
                     </a>
                 </div>
@@ -677,18 +677,7 @@ try {
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
-    <script>
-        // Funciones básicas para interactividad
-        function addToCart(productId) {
-            // Implementar más adelante
-            console.log('Agregar al carrito:', productId);
-        }
-
-        function addToWishlist(productId) {
-            // Implementar más adelante
-            console.log('Agregar a favoritos:', productId);
-        }
-
+    <script>      
         // Animaciones de scroll
         window.addEventListener('scroll', function() {
             const header = document.querySelector('header');

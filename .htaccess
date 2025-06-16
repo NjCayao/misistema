@@ -1,4 +1,5 @@
 # .htaccess - URLs Amigables para MiSistema
+RewriteRule ^api/(.*)$ misistema/api/$1 [L]
 RewriteEngine On
 
 # Configuraciones de seguridad
@@ -66,57 +67,65 @@ RedirectMatch 403 ^/vendor/(?!adminlte|fontawesome)
     Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
 </IfModule>
 
-# Redirección específica para admin
+# REDIRECCIONES Y URLs AMIGABLES
+# ⚠️ ORDEN IMPORTANTE: De más específico a más general
+
+# 1. Admin (debe ir primero)
 RewriteRule ^admin/?$ admin/index.php [QSA,L]
+RewriteRule ^admin/(.*)$ admin/$1 [QSA,L]
 
-# Redirecciones principales - URLs amigables
-
-# Página de productos
-# RewriteRule ^(?!admin)([a-zA-Z0-9\-]+)/?$ pages/page.php?slug=$1 [QSA,L]
-RewriteRule ^producto/([a-zA-Z0-9\-]+)/?$ pages/product.php?slug=$1 [L,QSA]
-
-# Producto individual
-RewriteRule ^producto/([a-zA-Z0-9\-]+)/?$ pages/product.php?slug=$1 [QSA,L]
-
-# Categoría específica
-RewriteRule ^categoria/([a-zA-Z0-9\-]+)/?$ pages/category.php?slug=$1 [QSA,L]
-
-# Página de búsqueda
-RewriteRule ^buscar/?$ pages/search.php [QSA,L]
-
-# Carrito de compras
-RewriteRule ^carrito/?$ pages/cart.php [QSA,L]
-
-# Proceso de checkout
-RewriteRule ^checkout/?$ pages/checkout.php [QSA,L]
-
-# Páginas de usuario
-RewriteRule ^login/?$ pages/login.php [QSA,L]
-RewriteRule ^register/?$ pages/register.php [QSA,L]
-RewriteRule ^logout/?$ pages/logout.php [QSA,L]
-RewriteRule ^dashboard/?$ pages/dashboard.php [QSA,L]
-RewriteRule ^mis-compras/?$ pages/dashboard.php?section=orders [QSA,L]
-RewriteRule ^perfil/?$ pages/dashboard.php?section=profile [QSA,L]
-
-# Páginas dinámicas del CMS (debe ir al final para no interferir)
-RewriteRule ^([a-zA-Z0-9\-]+)/?$ pages/page.php?slug=$1 [QSA,L]
-
-# API endpoints
+# 2. API endpoints (específicos)
 RewriteRule ^api/([a-zA-Z0-9\-/]+)/?$ api/$1.php [QSA,L]
 
-# Webhooks de pagos
+# 3. Webhooks de pagos (específicos)
 RewriteRule ^webhook/stripe/?$ api/payments/stripe_webhook.php [QSA,L]
 RewriteRule ^webhook/paypal/?$ api/payments/paypal_webhook.php [QSA,L]
 RewriteRule ^webhook/mercadopago/?$ api/payments/mercadopago_webhook.php [QSA,L]
 
-# Descargas protegidas
+# 4. Descargas protegidas
 RewriteRule ^download/([0-9]+)/?$ api/downloads/secure_download.php?id=$1 [QSA,L]
 
-# Sitemap dinámico
+# 5. Archivos del sistema
 RewriteRule ^sitemap\.xml$ api/sitemap.php [QSA,L]
-
-# Robots.txt dinámico
 RewriteRule ^robots\.txt$ api/robots.php [QSA,L]
+
+# 6. PÁGINAS DE AUTENTICACIÓN (AGREGAR ESTAS)
+RewriteRule ^login/?$ pages/login.php [QSA,L]
+RewriteRule ^register/?$ pages/register.php [QSA,L]
+RewriteRule ^logout/?$ pages/logout.php [QSA,L]
+RewriteRule ^verify-email/?$ pages/verify-email.php [QSA,L]
+RewriteRule ^forgot-password/?$ pages/forgot-password.php [QSA,L]
+RewriteRule ^reset-password/?$ pages/reset-password.php [QSA,L]
+
+# 7. PÁGINAS DE USUARIO
+RewriteRule ^dashboard/?$ pages/dashboard.php [QSA,L]
+RewriteRule ^mis-compras/?$ pages/purchases.php [QSA,L]
+RewriteRule ^mis-descargas/?$ pages/downloads.php [QSA,L]
+RewriteRule ^perfil/?$ pages/profile.php [QSA,L]
+RewriteRule ^configuracion/?$ pages/settings.php [QSA,L]
+
+# 8. PÁGINAS DE PRODUCTOS
+RewriteRule ^productos/?$ pages/products.php [QSA,L]
+RewriteRule ^producto/([a-zA-Z0-9\-]+)/?$ pages/product.php?slug=$1 [QSA,L]
+
+# 9. PÁGINAS DE CATEGORÍAS
+RewriteRule ^categoria/([a-zA-Z0-9\-]+)/?$ pages/category.php?slug=$1 [QSA,L]
+
+# Páginas del sistema
+RewriteRule ^contacto/?$ pages/contact.php [QSA,L]
+RewriteRule ^politica-privacidad/?$ pages/page.php?slug=poltica-de-privacidad [QSA,L]
+RewriteRule ^terminos-condiciones/?$ pages/page.php?slug=terminos-condiciones [QSA,L]
+
+# 10. BÚSQUEDA
+RewriteRule ^buscar/?$ pages/search.php [QSA,L]
+
+# 11. CARRITO Y CHECKOUT
+RewriteRule ^carrito/?$ pages/cart.php [QSA,L]
+RewriteRule ^checkout/?$ pages/checkout.php [QSA,L]
+
+# 12. PÁGINAS DINÁMICAS DEL CMS (DEBE IR AL FINAL)
+# Esta regla captura cualquier slug que no coincida con las anteriores
+RewriteRule ^([a-zA-Z0-9\-]+)/?$ pages/page.php?slug=$1 [QSA,L]
 
 # Redirecciones 301 para compatibilidad (si migras de otro sistema)
 # RewriteRule ^old-products/?$ /productos [R=301,L]
@@ -138,9 +147,3 @@ php_value memory_limit 256M
 php_value session.cookie_httponly 1
 php_value session.cookie_secure 0
 php_value session.use_strict_mode 1
-
-# Prevenir acceso directo a archivos PHP sensibles
-<FilesMatch "^(config|functions|database|settings)\.php$">
-    Order allow,deny
-    Deny from all
-</FilesMatch>

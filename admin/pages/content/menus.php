@@ -240,7 +240,7 @@ $error = $menuData['error'] ?? '';
                                 </div>
 
                                 <!-- Menú Usuario -->
-                                <div class="col-md-6">
+                                <!-- <div class="col-md-6">
                                     <div class="menu-section user-section">
                                         <div class="section-header">
                                             <h5>
@@ -268,10 +268,10 @@ $error = $menuData['error'] ?? '';
                                             <?php endif; ?>
                                         </div>
                                     </div>
-                                </div>
+                                </div> -->
 
                                 <!-- Menú Móvil -->
-                                <div class="col-md-12">
+                                <!-- <div class="col-md-12">
                                     <div class="menu-section mobile-section">
                                         <div class="section-header">
                                             <h5>
@@ -299,7 +299,7 @@ $error = $menuData['error'] ?? '';
                                             <?php endif; ?>
                                         </div>
                                     </div>
-                                </div>
+                                </div> -->
                             </div>
                         </div>
                     </div>

@@ -266,10 +266,10 @@ $pageDescription = $product['meta_description'] ?: $product['short_description']
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="<?php echo SITE_URL; ?>">Inicio</a></li>
-                <li class="breadcrumb-item"><a href="/productos">Productos</a></li>
+                <li class="breadcrumb-item"><a href="<?php echo SITE_URL; ?>/productos">Productos</a></li>
                 <?php if ($product['category_name']): ?>
                     <li class="breadcrumb-item">
-                        <a href="/productos?categoria=<?php echo $product['category_slug']; ?>">
+                        <a href="<?php echo SITE_URL; ?>/productos?categoria=<?php echo $product['category_slug']; ?>">
                             <?php echo htmlspecialchars($product['category_name']); ?>
                         </a>
                     </li>
@@ -519,12 +519,12 @@ $pageDescription = $product['meta_description'] ?: $product['short_description']
                                         </div>
                                     <?php endif; ?>
                                     <div class="product-overlay">
-                                        <a href="/producto/<?php echo $relatedProduct['slug']; ?>" class="btn btn-primary btn-sm">Ver</a>
+                                        <a href="<?php echo SITE_URL; ?>/producto/<?php echo $relatedProduct['slug']; ?>" class="btn btn-primary btn-sm">Ver</a>
                                     </div>
                                 </div>
                                 <div class="product-info">
                                     <h6 class="product-title">
-                                        <a href="/producto/<?php echo $relatedProduct['slug']; ?>" class="text-decoration-none text-dark">
+                                        <a href="<?php echo SITE_URL; ?>/producto/<?php echo $relatedProduct['slug']; ?>" class="text-decoration-none text-dark">
                                             <?php echo htmlspecialchars($relatedProduct['name']); ?>
                                         </a>
                                     </h6>
@@ -552,16 +552,6 @@ $pageDescription = $product['meta_description'] ?: $product['short_description']
     <script src="<?php echo ASSETS_URL; ?>/js/main.js"></script>
 
     <script>
-        function addToCart(productId, quantity = 1) {
-            // Función ya implementada en main.js
-            return window.addToCart(productId, quantity);
-        }
-
-        function addToWishlist(productId) {
-            // TODO: Implementar sistema de wishlist en futuras fases
-            showCartNotification('Función de favoritos próximamente disponible', 'info');
-        }
-
         // Auto-submit filtros
         document.querySelectorAll('input[type="radio"]').forEach(radio => {
             radio.addEventListener('change', function() {

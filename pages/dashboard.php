@@ -1,26 +1,26 @@
 <?php
-// pages/dashboard.php - Dashboard del cliente
+// pages/dashboard.php - Dashboard del cliente con URLs CORREGIDAS
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../config/functions.php';
 require_once __DIR__ . '/../config/settings.php';
 
 // Verificar modo mantenimiento
-if (Settings::get('maintenance_mode', '0') == '1' && !isAdmin()) {
+if (getSetting('maintenance_mode', '0') == '1' && !isAdmin()) {
     include '../maintenance.php';
     exit;
 }
 
 // Verificar que el usuario está logueado
 if (!isLoggedIn()) {
-    redirect('/pages/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+    redirect('/login?redirect=' . urlencode($_SERVER['REQUEST_URI']));
 }
 
 // Obtener datos del usuario
 $user = getCurrentUser();
 if (!$user) {
     logoutUser();
-    redirect('/pages/login.php');
+    redirect('/login');
 }
 
 $success = getFlashMessage('success');
@@ -115,7 +115,7 @@ try {
     $recommendedProducts = [];
 }
 
-$siteName = Settings::get('site_name', 'MiSistema');
+$siteName = getSetting('site_name', 'MiSistema');
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -358,10 +358,10 @@ $siteName = Settings::get('site_name', 'MiSistema');
                 </div>
                 <div class="col-md-4 text-md-end">
                     <div class="d-flex justify-content-end gap-2">
-                        <a href="/pages/profile.php" class="btn btn-light">
+                        <a href="<?php echo SITE_URL; ?>/perfil" class="btn btn-light">
                             <i class="fas fa-user-edit me-2"></i>Editar Perfil
                         </a>
-                        <a href="/pages/logout.php" class="btn btn-outline-light">
+                        <a href="<?php echo SITE_URL; ?>/logout" class="btn btn-outline-light">
                             <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
                         </a>
                     </div>
@@ -432,25 +432,25 @@ $siteName = Settings::get('site_name', 'MiSistema');
             <h5 class="mb-3">Acciones Rápidas</h5>
             <div class="row g-3">
                 <div class="col-md-3">
-                    <a href="/productos" class="action-btn">
+                    <a href="<?php echo SITE_URL; ?>/productos" class="action-btn">
                         <i class="fas fa-store"></i>
                         <div>Explorar Productos</div>
                     </a>
                 </div>
                 <div class="col-md-3">
-                    <a href="/pages/purchases.php" class="action-btn">
+                    <a href="<?php echo SITE_URL; ?>/mis-compras" class="action-btn">
                         <i class="fas fa-receipt"></i>
                         <div>Mis Compras</div>
                     </a>
                 </div>
                 <div class="col-md-3">
-                    <a href="/pages/downloads.php" class="action-btn">
+                    <a href="<?php echo SITE_URL; ?>/mis-descargas" class="action-btn">
                         <i class="fas fa-cloud-download-alt"></i>
                         <div>Mis Descargas</div>
                     </a>
                 </div>
                 <div class="col-md-3">
-                    <a href="/pages/support.php" class="action-btn">
+                    <a href="<?php echo SITE_URL; ?>/contacto" class="action-btn">
                         <i class="fas fa-life-ring"></i>
                         <div>Soporte</div>
                     </a>
@@ -467,7 +467,7 @@ $siteName = Settings::get('site_name', 'MiSistema');
                             <h5 class="mb-0">
                                 <i class="fas fa-box me-2"></i>Mis Productos
                             </h5>
-                            <a href="/pages/my-products.php" class="btn btn-sm btn-outline-primary">Ver Todos</a>
+                            <a href="<?php echo SITE_URL; ?>/mis-compras" class="btn btn-sm btn-outline-primary">Ver Todos</a>
                         </div>
                     </div>
                     <div class="section-body">
@@ -476,7 +476,7 @@ $siteName = Settings::get('site_name', 'MiSistema');
                                 <i class="fas fa-box-open"></i>
                                 <h6>No tienes productos aún</h6>
                                 <p>Explora nuestro catálogo y encuentra el software perfecto para ti</p>
-                                <a href="/productos" class="btn btn-primary">
+                                <a href="<?php echo SITE_URL; ?>/productos" class="btn btn-primary">
                                     <i class="fas fa-store me-2"></i>Explorar Productos
                                 </a>
                             </div>
@@ -496,7 +496,7 @@ $siteName = Settings::get('site_name', 'MiSistema');
                                             <div class="d-flex justify-content-between align-items-start">
                                                 <div>
                                                     <h6 class="mb-1">
-                                                        <a href="/producto/<?php echo $product['product_slug']; ?>" class="text-decoration-none">
+                                                        <a href="<?php echo SITE_URL; ?>/producto/<?php echo $product['product_slug']; ?>" class="text-decoration-none">
                                                             <?php echo htmlspecialchars($product['product_name']); ?>
                                                         </a>
                                                     </h6>
@@ -506,7 +506,7 @@ $siteName = Settings::get('site_name', 'MiSistema');
                                                     </small>
                                                 </div>
                                                 <div class="text-end">
-                                                    <a href="/pages/download.php?product=<?php echo $product['product_id']; ?>" 
+                                                    <a href="<?php echo SITE_URL; ?>/download?product=<?php echo $product['product_id']; ?>" 
                                                        class="btn btn-sm btn-primary">
                                                         <i class="fas fa-download me-1"></i>Descargar
                                                     </a>
@@ -554,6 +554,9 @@ $siteName = Settings::get('site_name', 'MiSistema');
                             <div class="text-center text-muted">
                                 <i class="fas fa-receipt fa-2x mb-2 opacity-50"></i>
                                 <p class="mb-0">Sin compras aún</p>
+                                <a href="<?php echo SITE_URL; ?>/productos" class="btn btn-sm btn-primary mt-2">
+                                    <i class="fas fa-store me-1"></i>Explorar Productos
+                                </a>
                             </div>
                         <?php else: ?>
                             <?php foreach ($recentOrders as $order): ?>
@@ -577,6 +580,9 @@ $siteName = Settings::get('site_name', 'MiSistema');
                                     </small>
                                 </div>
                             <?php endforeach; ?>
+                            <div class="text-center mt-3">
+                                <a href="<?php echo SITE_URL; ?>/mis-compras" class="btn btn-sm btn-outline-primary">Ver Todas</a>
+                            </div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -589,36 +595,43 @@ $siteName = Settings::get('site_name', 'MiSistema');
                         </h6>
                     </div>
                     <div class="section-body">
-                        <?php foreach (array_slice($recommendedProducts, 0, 3) as $product): ?>
-                            <div class="d-flex mb-3">
-                                <div class="product-image me-3" style="width: 50px; height: 50px;">
-                                    <?php if ($product['image']): ?>
-                                        <img src="<?php echo UPLOADS_URL; ?>/products/<?php echo $product['image']; ?>" 
-                                             alt="<?php echo htmlspecialchars($product['name']); ?>">
-                                    <?php else: ?>
-                                        <i class="fas fa-cube text-muted"></i>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1">
-                                        <a href="/producto/<?php echo $product['slug']; ?>" class="text-decoration-none">
-                                            <?php echo htmlspecialchars($product['name']); ?>
-                                        </a>
-                                    </h6>
-                                    <small class="text-muted d-block"><?php echo htmlspecialchars($product['category_name']); ?></small>
-                                    <div class="mt-1">
-                                        <?php if ($product['is_free']): ?>
-                                            <span class="badge bg-success">GRATIS</span>
+                        <?php if (empty($recommendedProducts)): ?>
+                            <div class="text-center text-muted">
+                                <i class="fas fa-star fa-2x mb-2 opacity-50"></i>
+                                <p class="mb-0">Cargando recomendaciones...</p>
+                            </div>
+                        <?php else: ?>
+                            <?php foreach (array_slice($recommendedProducts, 0, 3) as $product): ?>
+                                <div class="d-flex mb-3">
+                                    <div class="product-image me-3" style="width: 50px; height: 50px;">
+                                        <?php if ($product['image']): ?>
+                                            <img src="<?php echo UPLOADS_URL; ?>/products/<?php echo $product['image']; ?>" 
+                                                 alt="<?php echo htmlspecialchars($product['name']); ?>">
                                         <?php else: ?>
-                                            <strong class="text-primary"><?php echo formatPrice($product['price']); ?></strong>
+                                            <i class="fas fa-cube text-muted"></i>
                                         <?php endif; ?>
                                     </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">
+                                            <a href="<?php echo SITE_URL; ?>/producto/<?php echo $product['slug']; ?>" class="text-decoration-none">
+                                                <?php echo htmlspecialchars($product['name']); ?>
+                                            </a>
+                                        </h6>
+                                        <small class="text-muted d-block"><?php echo htmlspecialchars($product['category_name']); ?></small>
+                                        <div class="mt-1">
+                                            <?php if ($product['is_free']): ?>
+                                                <span class="badge bg-success">GRATIS</span>
+                                            <?php else: ?>
+                                                <strong class="text-primary"><?php echo formatPrice($product['price']); ?></strong>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
                                 </div>
+                            <?php endforeach; ?>
+                            <div class="text-center mt-3">
+                                <a href="<?php echo SITE_URL; ?>/productos" class="btn btn-sm btn-outline-primary">Ver Más Productos</a>
                             </div>
-                        <?php endforeach; ?>
-                        <div class="text-center mt-3">
-                            <a href="/productos" class="btn btn-sm btn-outline-primary">Ver Más Productos</a>
-                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

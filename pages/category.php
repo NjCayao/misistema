@@ -284,7 +284,7 @@ $pageDescription = $category['description'] ?: "Explora todos los productos de l
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item"><a href="<?php echo SITE_URL; ?>" class="text-white-50">Inicio</a></li>
-                            <li class="breadcrumb-item"><a href="/productos" class="text-white-50">Productos</a></li>
+                            <li class="breadcrumb-item"><a href="<?php echo SITE_URL; ?>/productos" class="text-white-50">Productos</a></li>
                             <li class="breadcrumb-item active text-white"><?php echo htmlspecialchars($category['name']); ?></li>
                         </ol>
                     </nav>
@@ -366,7 +366,7 @@ $pageDescription = $category['description'] ?: "Explora todos los productos de l
                     </form>
                 </div>
                 <div class="col-lg-4 text-lg-end">
-                    <a href="/categoria/<?php echo $category['slug']; ?>" class="btn btn-outline-secondary">
+                    <a href="<?php echo SITE_URL; ?>/categoria/<?php echo $category['slug']; ?>" class="btn btn-outline-secondary">
                         <i class="fas fa-times"></i> Limpiar Filtros
                     </a>
                 </div>
@@ -417,7 +417,7 @@ $pageDescription = $category['description'] ?: "Explora todos los productos de l
                 <i class="fas fa-search fa-3x text-muted mb-3"></i>
                 <h4 class="text-muted">No se encontraron productos</h4>
                 <p class="text-muted">No hay productos que coincidan con los filtros aplicados</p>
-                <a href="/categoria/<?php echo $category['slug']; ?>" class="btn btn-primary">Ver Todos los Productos</a>
+                <a href="<?php echo SITE_URL; ?>/categoria/<?php echo $category['slug']; ?>" class="btn btn-primary">Ver Todos los Productos</a>
             </div>
         <?php else: ?>
             <div class="row g-4">
@@ -435,7 +435,7 @@ $pageDescription = $category['description'] ?: "Explora todos los productos de l
                                     </div>
                                 <?php endif; ?>
                                 <div class="product-overlay">
-                                    <a href="/producto/<?php echo $product['slug']; ?>" class="btn btn-primary">Ver Detalles</a>
+                                    <a href="<?php echo SITE_URL; ?>/producto/<?php echo $product['slug']; ?>" class="btn btn-primary">Ver Detalles</a>
                                 </div>
                                 <?php if ($product['is_free']): ?>
                                     <span class="product-badge free">GRATIS</span>
@@ -446,7 +446,7 @@ $pageDescription = $category['description'] ?: "Explora todos los productos de l
                             </div>
                             <div class="product-info">
                                 <h5 class="product-title">
-                                    <a href="/producto/<?php echo $product['slug']; ?>" class="text-decoration-none text-dark">
+                                    <a href="<?php echo SITE_URL; ?>/producto/<?php echo $product['slug']; ?>" class="text-decoration-none text-dark">
                                         <?php echo htmlspecialchars($product['name']); ?>
                                     </a>
                                 </h5>
@@ -530,7 +530,7 @@ $pageDescription = $category['description'] ?: "Explora todos los productos de l
                 <div class="row g-4">
                     <?php foreach ($otherCategories as $otherCategory): ?>
                         <div class="col-md-6 col-lg-3">
-                            <a href="/categoria/<?php echo $otherCategory['slug']; ?>" class="text-decoration-none">
+                            <a href="<?php echo SITE_URL; ?>/categoria/<?php echo $otherCategory['slug']; ?>" class="text-decoration-none">
                                 <div class="category-card-small">
                                     <div class="icon">
                                         <?php if ($otherCategory['image']): ?>

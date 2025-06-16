@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $success = 'Tu cuenta ya está verificada';
                 echo "<script>
                     setTimeout(function() {
-                        window.location.href = '/pages/login.php';
+                        window.location.href = '" . SITE_URL . "/pages/login.php';
                     }, 2000);
                 </script>";
             } elseif (strtotime($user['verification_expires']) < time()) {
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Redirigir después de 2 segundos
                     echo "<script>
                         setTimeout(function() {
-                            window.location.href = '/pages/login.php?verified=1';
+                            window.location.href = '" . SITE_URL . "/pages/login.php?verified=1';
                         }, 2000);
                     </script>";
                 } else {
@@ -288,7 +288,7 @@ $siteName = Settings::get('site_name', 'MiSistema');
                             </div>
                             <h2 class="mb-2">Verificar tu Email</h2>
                             <p class="mb-0 opacity-75">
-                                Hemos enviado un código de 6 dígitos a:<br>
+                                Hemos enviado un código de 6 dígitos a:<br> No olvides revisar tu carpeta de spam.
                                 <strong><?php echo htmlspecialchars($email); ?></strong>
                             </p>
                         </div>
@@ -354,7 +354,7 @@ $siteName = Settings::get('site_name', 'MiSistema');
                                 </form>
                                 
                                 <div class="mt-3">
-                                    <a href="/pages/register.php" class="text-muted text-decoration-none">
+                                    <a href="<?php echo SITE_URL; ?>/pages/register.php" class="text-muted text-decoration-none">
                                         <i class="fas fa-arrow-left me-1"></i>Volver al registro
                                     </a>
                                 </div>

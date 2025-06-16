@@ -1,7 +1,7 @@
 <?php
-// includes/header.php
-$siteName = Settings::get('site_name', 'MiSistema');
-$siteLogo = Settings::get('site_logo', '');
+// includes/header.php - CORREGIDO
+$siteName = getSetting('site_name', 'MiSistema');
+$siteLogo = getSetting('site_logo', '');
 
 // Obtener menú principal
 try {
@@ -45,9 +45,9 @@ function processMenuUrl($url) {
     return SITE_URL . '/' . $url;
 }
 
-
+// Obtener datos del usuario actual
+$currentUser = getCurrentUser();
 ?>
-
 
 <header class="main-header">
     <!-- Top Bar -->
@@ -58,12 +58,12 @@ function processMenuUrl($url) {
                     <div class="top-bar-left">
                         <span class="top-bar-text">
                             <i class="fas fa-envelope me-2"></i>
-                            <?php echo Settings::get('site_email', 'info@misistema.com'); ?>
+                            <?php echo getSetting('site_email', 'info@misistema.com'); ?>
                         </span>
-                        <?php if (Settings::get('contact_phone')): ?>
+                        <?php if (getSetting('contact_phone')): ?>
                             <span class="top-bar-text ms-3">
                                 <i class="fas fa-phone me-2"></i>
-                                <?php echo Settings::get('contact_phone'); ?>
+                                <?php echo getSetting('contact_phone'); ?>
                             </span>
                         <?php endif; ?>
                     </div>
@@ -71,48 +71,49 @@ function processMenuUrl($url) {
                 <div class="col-md-6">
                     <div class="top-bar-right text-end">
                         <!-- Redes Sociales -->
-                        <?php if (Settings::get('facebook_url')): ?>
-                            <a href="<?php echo Settings::get('facebook_url'); ?>" target="_blank" class="social-link">
+                        <?php if (getSetting('facebook_url')): ?>
+                            <a href="<?php echo getSetting('facebook_url'); ?>" target="_blank" class="social-link">
                                 <i class="fab fa-facebook-f"></i>
                             </a>
                         <?php endif; ?>
-                        <?php if (Settings::get('twitter_url')): ?>
-                            <a href="<?php echo Settings::get('twitter_url'); ?>" target="_blank" class="social-link">
+                        <?php if (getSetting('twitter_url')): ?>
+                            <a href="<?php echo getSetting('twitter_url'); ?>" target="_blank" class="social-link">
                                 <i class="fab fa-twitter"></i>
                             </a>
                         <?php endif; ?>
-                        <?php if (Settings::get('instagram_url')): ?>
-                            <a href="<?php echo Settings::get('instagram_url'); ?>" target="_blank" class="social-link">
+                        <?php if (getSetting('instagram_url')): ?>
+                            <a href="<?php echo getSetting('instagram_url'); ?>" target="_blank" class="social-link">
                                 <i class="fab fa-instagram"></i>
                             </a>
                         <?php endif; ?>
-                        <?php if (Settings::get('linkedin_url')): ?>
-                            <a href="<?php echo Settings::get('linkedin_url'); ?>" target="_blank" class="social-link">
+                        <?php if (getSetting('linkedin_url')): ?>
+                            <a href="<?php echo getSetting('linkedin_url'); ?>" target="_blank" class="social-link">
                                 <i class="fab fa-linkedin-in"></i>
                             </a>
                         <?php endif; ?>
                         
                         <!-- User Menu -->
                         <div class="user-menu ms-3">
-                            <?php if (isset($_SESSION['user_id'])): ?>
+                            <?php if (isLoggedIn() && $currentUser): ?>
                                 <div class="dropdown">
                                     <a href="#" class="dropdown-toggle user-link" data-bs-toggle="dropdown">
                                         <i class="fas fa-user me-1"></i>
-                                        <?php echo htmlspecialchars($_SESSION['user_name']); ?>
+                                        <?php echo htmlspecialchars($currentUser['first_name']); ?>
                                     </a>
                                     <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/dashboard.php"><i class="fas fa-tachometer-alt me-2"></i>Mi Dashboard</a></li>
-                                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/purchases.php"><i class="fas fa-shopping-bag me-2"></i>Mis Compras</a></li>
-                                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/profile.php"><i class="fas fa-user me-2"></i>Mi Perfil</a></li>
+                                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/dashboard"><i class="fas fa-tachometer-alt me-2"></i>Mi Dashboard</a></li>
+                                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/mis-compras"><i class="fas fa-shopping-bag me-2"></i>Mis Compras</a></li>
+                                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/perfil"><i class="fas fa-user me-2"></i>Mi Perfil</a></li>
+                                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/configuracion"><i class="fas fa-cog me-2"></i>Configuración</a></li>
                                         <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/pages/logout.php"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
+                                        <li><a class="dropdown-item" href="<?php echo SITE_URL; ?>/logout"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
                                     </ul>
                                 </div>
                             <?php else: ?>
-                                <a href="<?php echo SITE_URL; ?>/pages/login.php" class="user-link">
+                                <a href="<?php echo SITE_URL; ?>/login" class="user-link">
                                     <i class="fas fa-sign-in-alt me-1"></i>Iniciar Sesión
                                 </a>
-                                <a href="<?php echo SITE_URL; ?>/pages/register.php" class="user-link ms-2">
+                                <a href="<?php echo SITE_URL; ?>/register" class="user-link ms-2">
                                     <i class="fas fa-user-plus me-1"></i>Registrarse
                                 </a>
                             <?php endif; ?>
@@ -180,7 +181,7 @@ function processMenuUrl($url) {
                 <div class="navbar-actions d-flex align-items-center">
                     <!-- Search -->
                     <div class="search-box me-3">
-                        <form class="d-flex" action="<?php echo SITE_URL; ?>/pages/search.php" method="GET">
+                        <form class="d-flex" action="<?php echo SITE_URL; ?>/buscar" method="GET">
                             <div class="input-group">
                                 <input class="form-control" type="search" placeholder="Buscar productos..." name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>">
                                 <button class="btn btn-outline-primary" type="submit">
@@ -192,7 +193,7 @@ function processMenuUrl($url) {
                     
                     <!-- Cart -->
                     <div class="cart-icon">
-                        <a href="#" class="btn btn-outline-primary position-relative" data-bs-toggle="modal" data-bs-target="#cartModal">
+                        <a href="<?php echo SITE_URL; ?>/carrito" class="btn btn-outline-primary position-relative">
                             <i class="fas fa-shopping-cart"></i>
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cart-count" style="display: none;">
                                 0
@@ -202,12 +203,12 @@ function processMenuUrl($url) {
                     
                     <!-- Mobile User Menu -->
                     <div class="mobile-user d-lg-none ms-3">
-                        <?php if (isset($_SESSION['user_id'])): ?>
-                            <a href="<?php echo SITE_URL; ?>/pages/dashboard.php" class="btn btn-sm btn-primary">
+                        <?php if (isLoggedIn()): ?>
+                            <a href="<?php echo SITE_URL; ?>/dashboard" class="btn btn-sm btn-primary">
                                 <i class="fas fa-user"></i>
                             </a>
                         <?php else: ?>
-                            <a href="<?php echo SITE_URL; ?>/pages/login.php" class="btn btn-sm btn-outline-primary">
+                            <a href="<?php echo SITE_URL; ?>/login" class="btn btn-sm btn-outline-primary">
                                 <i class="fas fa-sign-in-alt"></i>
                             </a>
                         <?php endif; ?>

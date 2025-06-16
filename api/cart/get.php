@@ -19,17 +19,17 @@ require_once __DIR__ . '/../../config/cart.php';
 try {
     // Validar carrito (verificar que productos sigan activos)
     $validation = Cart::validate();
-    
+
     // Obtener datos del carrito
     $items = Cart::getItems();
     $totals = Cart::getTotals();
     $isEmpty = Cart::isEmpty();
-    
+
     // Formatear items para el frontend
     $formattedItems = [];
     foreach ($items as $productId => $item) {
         $itemSubtotal = $item['is_free'] ? 0 : ($item['price'] * $item['quantity']);
-        
+
         $formattedItems[] = [
             'id' => $item['id'],
             'name' => $item['name'],
@@ -48,7 +48,7 @@ try {
             'added_ago' => timeAgo(date('Y-m-d H:i:s', $item['added_at']))
         ];
     }
-    
+
     // Respuesta
     $response = [
         'success' => true,
@@ -62,23 +62,21 @@ try {
             'tax_raw' => $totals['tax'],
             'total' => formatPrice($totals['total']),
             'total_raw' => $totals['total'],
-            'tax_rate' => $totals['tax_rate'],
+            'tax_rate' => $totals['tax_rate'] ?? 0,
             'currency_symbol' => Settings::get('currency_symbol', '$')
         ],
         'validation' => $validation
     ];
-    
+
     // Si hay errores de validación, incluirlos
     if (!$validation['valid']) {
         $response['validation_errors'] = $validation['errors'];
         $response['cart_updated'] = true;
     }
-    
+
     echo json_encode($response);
-    
 } catch (Exception $e) {
     logError("Error en API cart/get: " . $e->getMessage());
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Error interno del servidor']);
 }
-?>

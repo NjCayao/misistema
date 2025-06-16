@@ -1,7 +1,7 @@
 <?php
-// includes/footer.php
-$siteName = Settings::get('site_name', 'MiSistema');
-$siteDescription = Settings::get('site_description', 'Plataforma de venta de software');
+// includes/footer.php - CORREGIDO
+$siteName = getSetting('site_name', 'MiSistema');
+$siteDescription = getSetting('site_description', 'Plataforma de venta de software');
 
 // Obtener menú footer
 try {
@@ -44,28 +44,28 @@ try {
                         
                         <!-- Contact Info -->
                         <div class="contact-info">
-                            <?php if (Settings::get('site_email')): ?>
+                            <?php if (getSetting('site_email')): ?>
                                 <div class="contact-item">
                                     <i class="fas fa-envelope me-2"></i>
-                                    <a href="mailto:<?php echo Settings::get('site_email'); ?>">
-                                        <?php echo Settings::get('site_email'); ?>
+                                    <a href="mailto:<?php echo getSetting('site_email'); ?>">
+                                        <?php echo getSetting('site_email'); ?>
                                     </a>
                                 </div>
                             <?php endif; ?>
                             
-                            <?php if (Settings::get('contact_phone')): ?>
+                            <?php if (getSetting('contact_phone')): ?>
                                 <div class="contact-item">
                                     <i class="fas fa-phone me-2"></i>
-                                    <a href="tel:<?php echo Settings::get('contact_phone'); ?>">
-                                        <?php echo Settings::get('contact_phone'); ?>
+                                    <a href="tel:<?php echo getSetting('contact_phone'); ?>">
+                                        <?php echo getSetting('contact_phone'); ?>
                                     </a>
                                 </div>
                             <?php endif; ?>
                             
-                            <?php if (Settings::get('contact_address')): ?>
+                            <?php if (getSetting('contact_address')): ?>
                                 <div class="contact-item">
                                     <i class="fas fa-map-marker-alt me-2"></i>
-                                    <span><?php echo htmlspecialchars(Settings::get('contact_address')); ?></span>
+                                    <span><?php echo htmlspecialchars(getSetting('contact_address')); ?></span>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -74,32 +74,32 @@ try {
                         <div class="social-media mt-4">
                             <h6 class="social-title">Síguenos</h6>
                             <div class="social-links">
-                                <?php if (Settings::get('facebook_url')): ?>
-                                    <a href="<?php echo Settings::get('facebook_url'); ?>" target="_blank" class="social-link facebook">
+                                <?php if (getSetting('facebook_url')): ?>
+                                    <a href="<?php echo getSetting('facebook_url'); ?>" target="_blank" class="social-link facebook">
                                         <i class="fab fa-facebook-f"></i>
                                     </a>
                                 <?php endif; ?>
                                 
-                                <?php if (Settings::get('twitter_url')): ?>
-                                    <a href="<?php echo Settings::get('twitter_url'); ?>" target="_blank" class="social-link twitter">
+                                <?php if (getSetting('twitter_url')): ?>
+                                    <a href="<?php echo getSetting('twitter_url'); ?>" target="_blank" class="social-link twitter">
                                         <i class="fab fa-twitter"></i>
                                     </a>
                                 <?php endif; ?>
                                 
-                                <?php if (Settings::get('instagram_url')): ?>
-                                    <a href="<?php echo Settings::get('instagram_url'); ?>" target="_blank" class="social-link instagram">
+                                <?php if (getSetting('instagram_url')): ?>
+                                    <a href="<?php echo getSetting('instagram_url'); ?>" target="_blank" class="social-link instagram">
                                         <i class="fab fa-instagram"></i>
                                     </a>
                                 <?php endif; ?>
                                 
-                                <?php if (Settings::get('linkedin_url')): ?>
-                                    <a href="<?php echo Settings::get('linkedin_url'); ?>" target="_blank" class="social-link linkedin">
+                                <?php if (getSetting('linkedin_url')): ?>
+                                    <a href="<?php echo getSetting('linkedin_url'); ?>" target="_blank" class="social-link linkedin">
                                         <i class="fab fa-linkedin-in"></i>
                                     </a>
                                 <?php endif; ?>
                                 
-                                <?php if (Settings::get('youtube_url')): ?>
-                                    <a href="<?php echo Settings::get('youtube_url'); ?>" target="_blank" class="social-link youtube">
+                                <?php if (getSetting('youtube_url')): ?>
+                                    <a href="<?php echo getSetting('youtube_url'); ?>" target="_blank" class="social-link youtube">
                                         <i class="fab fa-youtube"></i>
                                     </a>
                                 <?php endif; ?>
@@ -116,7 +116,13 @@ try {
                             <li><a href="<?php echo SITE_URL; ?>">Inicio</a></li>
                             <li><a href="<?php echo SITE_URL; ?>/productos">Productos</a></li>
                             <li><a href="<?php echo SITE_URL; ?>/sobre-nosotros">Sobre Nosotros</a></li>
-                            <li><a href="<?php echo SITE_URL; ?>/contacto">Contacto</a></li>                            
+                            <li><a href="<?php echo SITE_URL; ?>/contacto">Contacto</a></li>
+                            <?php if (isLoggedIn()): ?>
+                                <li><a href="<?php echo SITE_URL; ?>/dashboard">Mi Cuenta</a></li>
+                            <?php else: ?>
+                                <li><a href="<?php echo SITE_URL; ?>/login">Iniciar Sesión</a></li>
+                                <li><a href="<?php echo SITE_URL; ?>/register">Registrarse</a></li>
+                            <?php endif; ?>
                         </ul>
                     </div>
                 </div>
@@ -126,32 +132,57 @@ try {
                     <div class="footer-section">
                         <h5 class="footer-title">Categorías</h5>
                         <ul class="footer-links">
-                            <?php foreach ($footerCategories as $category): ?>
-                                <li>
-                                    <a href="<?php echo SITE_URL; ?>/categoria/<?php echo $category['slug']; ?>">
-                                        <?php echo htmlspecialchars($category['name']); ?>
-                                    </a>
-                                </li>
-                            <?php endforeach; ?>
+                            <?php if (empty($footerCategories)): ?>
+                                <li><a href="<?php echo SITE_URL; ?>/categoria/sistemas-php">Sistemas PHP</a></li>
+                                <li><a href="<?php echo SITE_URL; ?>/categoria/zona-codigo">Zona de Código</a></li>
+                            <?php else: ?>
+                                <?php foreach ($footerCategories as $category): ?>
+                                    <li>
+                                        <a href="<?php echo SITE_URL; ?>/categoria/<?php echo $category['slug']; ?>">
+                                            <?php echo htmlspecialchars($category['name']); ?>
+                                        </a>
+                                    </li>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </ul>
                     </div>
                 </div>
-                               
                 
-                <!-- Newsletter -->
-                <div class="col-lg-2 col-md-6">
+                <!-- Newsletter & Menu Items -->
+                <div class="col-lg-4 col-md-6">
                     <div class="footer-section">
-                        <h5 class="footer-title">Newsletter</h5>
+                        <h5 class="footer-title">Mantente Conectado</h5>
                         <p class="newsletter-text">Recibe las últimas noticias y ofertas especiales</p>
-                        <form class="newsletter-form" action="<?php echo SITE_URL; ?>/newsletter" method="POST">
+                        
+                        <!-- Newsletter Form -->
+                        <form class="newsletter-form mb-4" action="<?php echo SITE_URL; ?>/api/newsletter" method="POST">
                             <div class="input-group">
                                 <input type="email" class="form-control" placeholder="Tu email" name="email" required>
                                 <button class="btn btn-primary" type="submit">
                                     <i class="fas fa-paper-plane"></i>
                                 </button>
                             </div>
-                        </form>                     
+                        </form>
                         
+                        <!-- Menu Items dinámicos del footer -->
+                        <?php if (!empty($footerMenuItems)): ?>
+                            <div class="footer-menu-items">
+                                <h6>Enlaces Útiles</h6>
+                                <ul class="footer-links">
+                                    <?php foreach ($footerMenuItems as $item): ?>
+                                        <li>
+                                            <a href="<?php echo processMenuUrl($item['url']); ?>" 
+                                               <?php echo $item['target'] == '_blank' ? 'target="_blank"' : ''; ?>>
+                                                <?php if ($item['icon']): ?>
+                                                    <i class="<?php echo $item['icon']; ?> me-1"></i>
+                                                <?php endif; ?>
+                                                <?php echo htmlspecialchars($item['title']); ?>
+                                            </a>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -171,8 +202,11 @@ try {
                     <div class="footer-bottom-links text-md-end">
                         <a href="<?php echo SITE_URL; ?>/poltica-de-privacidad">Política de Privacidad</a>
                         <span class="separator">|</span>
-                        <a href="<?php echo SITE_URL; ?>/trminos-y-condiciones">Términos y Condiciones</a>
-                        <span class="separator">|</span>                        
+                        <a href="<?php echo SITE_URL; ?>/terminos-condiciones">Términos y Condiciones</a>
+                        <?php if (isAdmin()): ?>
+                            <span class="separator">|</span>
+                            <a href="<?php echo ADMIN_URL; ?>">Admin</a>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -198,10 +232,12 @@ function scrollToTop() {
 // Show/hide back to top button
 window.addEventListener('scroll', function() {
     const backToTop = document.querySelector('.back-to-top');
-    if (window.scrollY > 300) {
-        backToTop.classList.add('show');
-    } else {
-        backToTop.classList.remove('show');
+    if (backToTop) {
+        if (window.scrollY > 300) {
+            backToTop.classList.add('show');
+        } else {
+            backToTop.classList.remove('show');
+        }
     }
 });
 
@@ -213,7 +249,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const email = this.querySelector('input[name="email"]').value;
             
-            // Aquí implementaremos el envío real más adelante
+            // TODO: Implementar envío real más adelante
             alert('¡Gracias por suscribirte! Te enviaremos nuestras novedades.');
             this.reset();
         });

@@ -1,3 +1,5 @@
+const SITE_URL = '<?php echo SITE_URL; ?>';
+// === CARGA DE RECURSOS ===
 document.addEventListener('DOMContentLoaded', function() {
     // Header scroll effect
     const header = document.querySelector('.main-header');
@@ -52,14 +54,15 @@ function addToCart(productId, quantity = 1) {
     
     // Mostrar loading en el botón
     const addButton = document.querySelector(`[onclick="addToCart(${productId})"]`);
+    let originalText = '';
     if (addButton) {
-        const originalText = addButton.innerHTML;
+        originalText = addButton.innerHTML;
         addButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agregando...';
         addButton.disabled = true;
     }
     
     // Hacer petición AJAX
-    fetch('/api/cart/add.php', {
+    fetch('api/cart/add.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -74,11 +77,6 @@ function addToCart(productId, quantity = 1) {
             
             // Mostrar notificación de éxito
             showCartNotification(data.message, 'success');
-            
-            // Actualizar display del carrito si el modal está abierto
-            if (document.getElementById('cartModal') && document.getElementById('cartModal').classList.contains('show')) {
-                loadCartContent();
-            }
             
             // Animar el icono del carrito
             animateCartIcon();
@@ -96,10 +94,15 @@ function addToCart(productId, quantity = 1) {
         
         // Restaurar botón
         if (addButton) {
-            addButton.innerHTML = addButton.dataset.originalText || '<i class="fas fa-cart-plus me-2"></i>Agregar al Carrito';
+            addButton.innerHTML = originalText || '<i class="fas fa-cart-plus me-2"></i>Agregar al Carrito';
             addButton.disabled = false;
         }
     });
+}
+
+function addToWishlist(productId) {
+    // TODO: Implementar sistema de wishlist en futuras fases
+    showCartNotification('Función de favoritos próximamente disponible', 'info');
 }
 
 /**
@@ -109,8 +112,8 @@ function updateCartQuantity(productId, quantity) {
     if (cartUpdating) return;
     
     cartUpdating = true;
-    
-    fetch('/api/cart/update.php', {
+
+    fetch('api/cart/update.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -159,8 +162,8 @@ function removeFromCart(productId) {
     if (cartUpdating) return;
     
     cartUpdating = true;
-    
-    fetch('/api/cart/remove.php', {
+
+    fetch('api/cart/remove.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -213,7 +216,7 @@ function clearCart() {
  * Cargar contenido del carrito
  */
 function loadCartContent() {
-    fetch('/api/cart/get.php')
+    fetch(`/api/cart/get.php`)
     .then(response => response.json())
     .then(data => {
         if (data.success) {

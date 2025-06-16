@@ -1,12 +1,12 @@
 <?php
-// pages/search.php - Sistema de búsqueda de productos
+// pages/search.php - Sistema de búsqueda de productos CORREGIDO
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../config/functions.php';
 require_once __DIR__ . '/../config/settings.php';
 
 // Verificar modo mantenimiento
-if (Settings::get('maintenance_mode', '0') == '1' && !isAdmin()) {
+if (getSetting('maintenance_mode', '0') == '1' && !isAdmin()) {
     include '../maintenance.php';
     exit;
 }
@@ -87,7 +87,7 @@ if (!empty($query) && strlen(trim($query)) >= 2) {
                 'precio_asc' => 'p.price ASC',
                 'precio_desc' => 'p.price DESC',
                 'recientes' => 'p.created_at DESC',
-                'populares' => 'p.download_count DESC, p.created_at DESC',
+                'populares' => 'COALESCE(p.download_count, 0) DESC, p.created_at DESC',
                 default => 'relevancia_score DESC, p.created_at DESC'
             };
             
@@ -211,7 +211,7 @@ function generateSearchSuggestions($db, $query) {
     return $suggestions;
 }
 
-$siteName = Settings::get('site_name', 'MiSistema');
+$siteName = getSetting('site_name', 'MiSistema');
 $pageTitle = $query ? "Búsqueda: $query" : "Buscar Productos";
 ?>
 <!DOCTYPE html>
@@ -248,13 +248,13 @@ $pageTitle = $query ? "Búsqueda: $query" : "Buscar Productos";
             border-radius: 30px;
             padding: 0 60px 0 25px;
             border: none;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgb(0 0 0 / 57%);
         }
         
         .search-box-large .btn {
-            position: absolute;
+            position: relative;
             right: 5px;
-            top: 5px;
+            top: 0px;
             bottom: 5px;
             width: 50px;
             border-radius: 25px;
@@ -340,6 +340,123 @@ $pageTitle = $query ? "Búsqueda: $query" : "Buscar Productos";
         
         .product-meta i {
             margin-right: 0.25rem;
+        }
+        
+        .product-card {
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .product-image {
+            position: relative;
+            height: 200px;
+            overflow: hidden;
+        }
+        
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .no-image {
+            width: 100%;
+            height: 100%;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-size: 3rem;
+        }
+        
+        .product-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .product-card:hover .product-overlay {
+            opacity: 1;
+        }
+        
+        .product-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        
+        .product-badge.free {
+            background: #28a745;
+            color: white;
+        }
+        
+        .product-info {
+            padding: 1.5rem;
+        }
+        
+        .product-category {
+            font-size: 0.8rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        
+        .product-title {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            line-height: 1.3;
+        }
+        
+        .product-description {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+        
+        .product-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+        }
+        
+        .price-free {
+            color: #28a745;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .price {
+            color: #007bff;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .product-actions {
+            display: flex;
+            gap: 0.5rem;
         }
     </style>
 </head>
@@ -460,7 +577,7 @@ $pageTitle = $query ? "Búsqueda: $query" : "Buscar Productos";
                             <button type="submit" class="btn btn-primary w-100 mb-2">
                                 <i class="fas fa-filter"></i> Aplicar Filtros
                             </button>
-                            <a href="/pages/search.php?q=<?php echo urlencode($query); ?>" class="btn btn-outline-secondary w-100">
+                            <a href="<?php echo SITE_URL; ?>/buscar?q=<?php echo urlencode($query); ?>" class="btn btn-outline-secondary w-100">
                                 <i class="fas fa-times"></i> Limpiar Filtros
                             </a>
                         </form>
@@ -520,7 +637,7 @@ $pageTitle = $query ? "Búsqueda: $query" : "Buscar Productos";
                                     <div class="suggestion-tags">
                                         <p class="mb-3">Quizás te interese buscar:</p>
                                         <?php foreach ($suggestions as $suggestion): ?>
-                                            <a href="/pages/search.php?q=<?php echo urlencode($suggestion); ?>" class="suggestion-tag">
+                                            <a href="<?php echo SITE_URL; ?>/buscar?q=<?php echo urlencode($suggestion); ?>" class="suggestion-tag">
                                                 <?php echo htmlspecialchars($suggestion); ?>
                                             </a>
                                         <?php endforeach; ?>
@@ -530,7 +647,7 @@ $pageTitle = $query ? "Búsqueda: $query" : "Buscar Productos";
                                 <p class="text-muted">Usa la caja de búsqueda para encontrar productos</p>
                             <?php endif; ?>
                             
-                            <a href="/productos" class="btn btn-primary mt-3">
+                            <a href="<?php echo SITE_URL; ?>/productos" class="btn btn-primary mt-3">
                                 <i class="fas fa-arrow-left me-2"></i>Ver Todos los Productos
                             </a>
                         </div>
@@ -550,7 +667,7 @@ $pageTitle = $query ? "Búsqueda: $query" : "Buscar Productos";
                                                 </div>
                                             <?php endif; ?>
                                             <div class="product-overlay">
-                                                <a href="/producto/<?php echo $product['slug']; ?>" class="btn btn-primary">Ver Detalles</a>
+                                                <a href="<?php echo SITE_URL; ?>/producto/<?php echo $product['slug']; ?>" class="btn btn-primary">Ver Detalles</a>
                                             </div>
                                             <?php if ($product['is_free']): ?>
                                                 <span class="product-badge free">GRATIS</span>
@@ -561,7 +678,7 @@ $pageTitle = $query ? "Búsqueda: $query" : "Buscar Productos";
                                                 <div class="product-category"><?php echo htmlspecialchars($product['category_name']); ?></div>
                                             <?php endif; ?>
                                             <h5 class="product-title">
-                                                <a href="/producto/<?php echo $product['slug']; ?>" class="text-decoration-none text-dark">
+                                                <a href="<?php echo SITE_URL; ?>/producto/<?php echo $product['slug']; ?>" class="text-decoration-none text-dark">
                                                     <?php
                                                     // Resaltar términos de búsqueda en el título
                                                     $highlightedName = htmlspecialchars($product['name']);
@@ -677,14 +794,14 @@ $pageTitle = $query ? "Búsqueda: $query" : "Buscar Productos";
                     <div class="mt-5">
                         <h5 class="mb-3">Búsquedas Populares</h5>
                         <div class="suggestion-tags">
-                            <a href="/pages/search.php?q=sistema+de+ventas" class="suggestion-tag">Sistema de Ventas</a>
-                            <a href="/pages/search.php?q=inventario" class="suggestion-tag">Inventario</a>
-                            <a href="/pages/search.php?q=crm" class="suggestion-tag">CRM</a>
-                            <a href="/pages/search.php?q=ecommerce" class="suggestion-tag">E-commerce</a>
-                            <a href="/pages/search.php?q=pos" class="suggestion-tag">POS</a>
-                            <a href="/pages/search.php?q=contabilidad" class="suggestion-tag">Contabilidad</a>
-                            <a href="/pages/search.php?q=php" class="suggestion-tag">PHP</a>
-                            <a href="/pages/search.php?q=mysql" class="suggestion-tag">MySQL</a>
+                            <a href="<?php echo SITE_URL; ?>/buscar?q=sistema+de+ventas" class="suggestion-tag">Sistema de Ventas</a>
+                            <a href="<?php echo SITE_URL; ?>/buscar?q=inventario" class="suggestion-tag">Inventario</a>
+                            <a href="<?php echo SITE_URL; ?>/buscar?q=crm" class="suggestion-tag">CRM</a>
+                            <a href="<?php echo SITE_URL; ?>/buscar?q=ecommerce" class="suggestion-tag">E-commerce</a>
+                            <a href="<?php echo SITE_URL; ?>/buscar?q=pos" class="suggestion-tag">POS</a>
+                            <a href="<?php echo SITE_URL; ?>/buscar?q=contabilidad" class="suggestion-tag">Contabilidad</a>
+                            <a href="<?php echo SITE_URL; ?>/buscar?q=php" class="suggestion-tag">PHP</a>
+                            <a href="<?php echo SITE_URL; ?>/buscar?q=mysql" class="suggestion-tag">MySQL</a>
                         </div>
                     </div>
                     
@@ -693,13 +810,13 @@ $pageTitle = $query ? "Búsqueda: $query" : "Buscar Productos";
                         <h5 class="mb-3">Explorar por Categorías</h5>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <a href="/productos?categoria=sistemas-php" class="d-block p-3 border rounded text-decoration-none">
+                                <a href="<?php echo SITE_URL; ?>/categoria/sistemas-php" class="d-block p-3 border rounded text-decoration-none">
                                     <h6 class="text-primary">Sistemas PHP</h6>
                                     <small class="text-muted">Sistemas completos en PHP</small>
                                 </a>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <a href="/productos?categoria=zona-codigo" class="d-block p-3 border rounded text-decoration-none">
+                                <a href="<?php echo SITE_URL; ?>/categoria/zona-codigo" class="d-block p-3 border rounded text-decoration-none">
                                     <h6 class="text-primary">Zona de Código</h6>
                                     <small class="text-muted">Componentes y códigos</small>
                                 </a>
@@ -721,12 +838,14 @@ $pageTitle = $query ? "Búsqueda: $query" : "Buscar Productos";
     <script>
         function addToCart(productId) {
             console.log('Agregar al carrito:', productId);
-            // Implementar más adelante
+            // TODO: Implementar más adelante
+            alert('Función de carrito próximamente disponible');
         }
         
         function addToWishlist(productId) {
             console.log('Agregar a favoritos:', productId);
-            // Implementar más adelante
+            // TODO: Implementar más adelante
+            alert('Función de favoritos próximamente disponible');
         }
         
         // Auto-submit filtros

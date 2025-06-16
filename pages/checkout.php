@@ -485,7 +485,7 @@ $pageTitle = 'Checkout - Finalizar Compra';
                             <input class="form-check-input" type="checkbox" id="accept_terms" name="accept_terms" required>
                             <label class="form-check-label" for="accept_terms">
                                 Acepto los <a href="/terminos-condiciones" target="_blank">Términos y Condiciones</a> 
-                                y la <a href="/politica-privacidad" target="_blank">Política de Privacidad</a> *
+                                y la <a href="/poltica-de-privacidad" target="_blank">Política de Privacidad</a> *
                             </label>
                         </div>
                         

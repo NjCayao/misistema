@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = $db->prepare("SELECT COALESCE(MAX(sort_order), -1) + 1 as next_order FROM menu_items WHERE menu_location = 'available_pages'");
                     $stmt->execute();
                     $nextOrder = $stmt->fetch()['next_order'];
-                    
+
                     $stmt = $db->prepare("
                         INSERT INTO menu_items (title, url, menu_location, is_active, sort_order) 
                         VALUES (?, ?, ?, ?, ?)
@@ -117,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Actualizar en menu_items (solo título y URL)
                     $currentUrl = '/' . $currentPage['slug'];
                     $newUrl = '/' . $slug;
-                    
+
                     $stmt = $db->prepare("UPDATE menu_items SET title = ?, url = ? WHERE url = ?");
                     $stmt->execute([$title, $newUrl, $currentUrl]);
 
@@ -131,11 +131,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         throw new Exception('ID inválido');
                     }
 
+                    // PROTEGER PÁGINAS DEL SISTEMA (ID 1 y 2)
+                    if ($id <= 2) {
+                        throw new Exception('No se puede eliminar esta página del sistema. Usa el editor de páginas especiales.');
+                    }
+
                     // Obtener datos de la página
                     $stmt = $db->prepare("SELECT slug FROM pages WHERE id = ?");
                     $stmt->execute([$id]);
                     $pageToDelete = $stmt->fetch();
-                    
+
                     if (!$pageToDelete) {
                         throw new Exception('Página no encontrada');
                     }
@@ -227,7 +232,7 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
             border: 1px solid #ced4da;
             border-radius: 0.25rem;
         }
-        
+
         .menu-auto-info {
             background: #e3f2fd;
             border: 1px solid #2196f3;
@@ -235,7 +240,7 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
             padding: 15px;
             margin-bottom: 20px;
         }
-        
+
         .menu-auto-info h6 {
             color: #1976d2;
             margin-bottom: 10px;
@@ -299,11 +304,18 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                                     <h6><i class="fas fa-magic"></i> Sistema Automático de Menús</h6>
                                     <p class="mb-0">
                                         <i class="fas fa-info-circle"></i>
-                                        <strong>Todas las páginas aparecen automáticamente</strong> en "Páginas Disponibles" del editor de menús. 
+                                        <strong>Todas las páginas aparecen automáticamente</strong> en "Páginas Disponibles" del editor de menús.
                                         El estado de la página controla si se muestra en el sitio público.
                                     </p>
                                 </div>
-                                
+                                <div class="alert alert-info">
+                                    <h6><i class="fas fa-info-circle"></i> Información sobre Páginas del Sistema</h6>
+                                    <p class="mb-1">
+                                        <strong>Páginas Protegidas:</strong> Las páginas "Política de Privacidad" y "Términos y Condiciones"
+                                        son páginas del sistema y no pueden ser eliminadas.
+                                    </p>
+                                </div>
+
                                 <div class="card">
                                     <div class="card-header">
                                         <h3 class="card-title">Páginas del Sitio</h3>
@@ -333,6 +345,9 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                                                         <tr>
                                                             <td>
                                                                 <strong><?php echo htmlspecialchars($page['title']); ?></strong>
+                                                                <?php if ($page['id'] <= 2): ?>
+                                                                    <span class="badge badge-primary ml-2">SISTEMA</span>
+                                                                <?php endif; ?>
                                                                 <?php if ($page['meta_title']): ?>
                                                                     <br><small class="text-muted">SEO: <?php echo htmlspecialchars($page['meta_title']); ?></small>
                                                                 <?php endif; ?>
@@ -373,9 +388,15 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                                                                 <a href="?edit=<?php echo $page['id']; ?>" class="btn btn-sm btn-info">
                                                                     <i class="fas fa-edit"></i>
                                                                 </a>
-                                                                <button class="btn btn-sm btn-danger" onclick="deletePage(<?php echo $page['id']; ?>, '<?php echo htmlspecialchars($page['title']); ?>')">
-                                                                    <i class="fas fa-trash"></i>
-                                                                </button>
+                                                                <?php if ($page['id'] > 2): ?>
+                                                                    <button class="btn btn-sm btn-danger" onclick="deletePage(<?php echo $page['id']; ?>, '<?php echo htmlspecialchars($page['title']); ?>')">
+                                                                        <i class="fas fa-trash"></i>
+                                                                    </button>
+                                                                <?php else: ?>
+                                                                    <span class="btn btn-sm btn-secondary disabled" title="Página del sistema protegida">
+                                                                        <i class="fas fa-shield-alt"></i>
+                                                                    </span>
+                                                                <?php endif; ?>
                                                             </td>
                                                         </tr>
                                                     <?php endforeach; ?>
@@ -386,6 +407,7 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                                 </div>
                             </div>
                         </div>
+
                     <?php else: ?>
                         <!-- Vista de Edición/Creación -->
                         <div class="row">
@@ -437,7 +459,7 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                                                                     </label>
                                                                 </div>
                                                                 <small class="text-muted">
-                                                                    Controla si la página se muestra en el sitio público. 
+                                                                    Controla si la página se muestra en el sitio público.
                                                                     <strong>Siempre aparece en el editor de menús.</strong>
                                                                 </small>
                                                             </div>
@@ -561,15 +583,17 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
             <?php if (!$createMode && $editPage): ?>
                 $('#slugPreview').val('<?php echo $editPage['slug']; ?>');
             <?php endif; ?>
-            
+
             // Inicializar DataTable
             $('#pagesTable').DataTable({
                 "responsive": true,
                 "lengthChange": false,
                 "autoWidth": false,
                 "order": [], // Sin orden inicial - respeta el ORDER BY de SQL
-                "columnDefs": [
-                    { "orderable": false, "targets": [7] } // Desactivar orden en columna de acciones
+                "columnDefs": [{
+                        "orderable": false,
+                        "targets": [7]
+                    } // Desactivar orden en columna de acciones
                 ]
             });
 

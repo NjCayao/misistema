@@ -119,10 +119,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if ($emailSent) {
                     setFlashMessage('success', 'Registro exitoso. Revisa tu email para verificar tu cuenta. <br> no olvides revisar la carpeta de spam.');
-                    redirect('/pages/verify-email?email=' . urlencode($email));
+                    redirect('/verify-email?email=' . urlencode($email));
                 } else {
                     setFlashMessage('warning', 'Registro exitoso. Hubo un problema enviando el email, pero puedes intentar verificar tu cuenta. <br> Si no recibes el email, contacta al soporte.');
-                    redirect('/pages/verify-email?email=' . urlencode($email));
+                    redirect('/verify-email?email=' . urlencode($email));
                 }
             } else {
                 $errors[] = 'Error al crear la cuenta. Inténtalo más tarde';
@@ -413,7 +413,7 @@ $siteName = Settings::get('site_name', 'MiSistema');
                                             <input class="form-check-input" type="checkbox" id="accept_terms" name="accept_terms" required>
                                             <label class="form-check-label" for="accept_terms">
                                                 Acepto los <a href="/pages/page.php?slug=terminos-condiciones" target="_blank">términos y condiciones</a>
-                                                y la <a href="/pages/page.php?slug=politica-privacidad" target="_blank">política de privacidad</a>
+                                                y la <a href="/pages/page.php?slug=poltica-de-privacidad" target="_blank">política de privacidad</a>
                                             </label>
                                         </div>
 

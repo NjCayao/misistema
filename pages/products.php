@@ -224,7 +224,7 @@ $pageTitle = $search ? "Búsqueda: $search" : ($category ? "Categoría: $categor
                 <div class="filter-sidebar">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="mb-0">Filtros</h5>
-                        <a href="/productos" class="clear-filters">
+                        <a href="<?php echo SITE_URL; ?>/productos" class="clear-filters">
                             <i class="fas fa-times"></i> Limpiar
                         </a>
                     </div>
@@ -345,7 +345,7 @@ $pageTitle = $search ? "Búsqueda: $search" : ($category ? "Categoría: $categor
                         <i class="fas fa-search fa-3x text-muted mb-3"></i>
                         <h4 class="text-muted">No se encontraron productos</h4>
                         <p class="text-muted">Intenta ajustar los filtros o buscar algo diferente</p>
-                        <a href="/productos" class="btn btn-primary">Ver Todos los Productos</a>
+                        <a href="<?php echo SITE_URL; ?>/productos" class="btn btn-primary">Ver Todos los Productos</a>
                     </div>
                 <?php else: ?>
                     <div class="row g-4">
@@ -363,7 +363,7 @@ $pageTitle = $search ? "Búsqueda: $search" : ($category ? "Categoría: $categor
                                             </div>
                                         <?php endif; ?>
                                         <div class="product-overlay">
-                                            <a href="/producto/<?php echo $product['slug']; ?>" class="btn btn-primary">Ver Detalles</a>
+                                            <a href="<?php echo SITE_URL; ?>/producto/<?php echo $product['slug']; ?>" class="btn btn-primary">Ver Detalles</a>
                                         </div>
                                         <?php if ($product['is_free']): ?>
                                             <span class="product-badge free">GRATIS</span>
@@ -377,7 +377,7 @@ $pageTitle = $search ? "Búsqueda: $search" : ($category ? "Categoría: $categor
                                             <div class="product-category"><?php echo htmlspecialchars($product['category_name']); ?></div>
                                         <?php endif; ?>
                                         <h5 class="product-title">
-                                            <a href="/producto/<?php echo $product['slug']; ?>" class="text-decoration-none text-dark">
+                                            <a href="<?php echo SITE_URL; ?>/producto/<?php echo $product['slug']; ?>" class="text-decoration-none text-dark">
                                                 <?php echo htmlspecialchars($product['name']); ?>
                                             </a>
                                         </h5>
@@ -468,18 +468,7 @@ $pageTitle = $search ? "Búsqueda: $search" : ($category ? "Categoría: $categor
         function setPriceRange(min, max) {
             document.querySelector('input[name="precio_min"]').value = min;
             document.querySelector('input[name="precio_max"]').value = max;
-        }
-        
-        function addToCart(productId) {
-            // Implementar más adelante
-            console.log('Agregar al carrito:', productId);
-        }
-        
-        function addToWishlist(productId) {
-            // Implementar más adelante
-            console.log('Agregar a favoritos:', productId);
-        }
-        
+        }       
         // Auto-submit filtros en algunos casos
         document.querySelectorAll('input[type="radio"]').forEach(radio => {
             radio.addEventListener('change', function() {
